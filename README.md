@@ -1,11 +1,13 @@
 # tap-autopilot
 
+[![CircleCI](https://circleci.com/gh/wcjohnson11/tap-autopilot.svg?style=svg)](https://circleci.com/gh/wcjohnson11/tap-autopilot)
+
 This is a [Singer](https://singer.io) tap that produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
 
 This tap:
 - Pulls raw data from Autopilot's [REST API](http://docs.autopilot.apiary.io/)
 - Extracts the following resources from Autopilot
-  - [Contacts](hhttp://docs.autopilot.apiary.io/#reference/api-methods/get-all-contacts/get-all-contacts)
+  - [Contacts](http://docs.autopilot.apiary.io/#reference/api-methods/get-all-contacts/get-all-contacts)
   - [Lists](http://docs.autopilot.apiary.io/#reference/api-methods/lists/get-list-of-lists)
   - [List's Contacts](http://docs.autopilot.apiary.io/#reference/api-methods/get-contacts-on-list/get-contacts-on-list)
   - [Smart Segments](http://docs.autopilot.apiary.io/#reference/api-methods/smart-segments/get-list-of-smart-segments)
