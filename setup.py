@@ -20,7 +20,7 @@ setup(name='tap-autopilot',
           tap-autopilot=tap_autopilot:main
       ''',
       packages=['tap_autopilot'],
-      package_data = {
+      package_data={
           'tap_autopilot/schemas': [
               "contacts.json",
               "lists_contacts.json",
@@ -30,4 +30,4 @@ setup(name='tap-autopilot',
           ],
       },
       include_package_data=True,
-)
+     )
