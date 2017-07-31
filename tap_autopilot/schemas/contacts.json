@@ -43,33 +43,3 @@
         }
     }
 }
-
-/*
-Remaining Field specified in API docs
-http://docs.autopilot.apiary.io/#reference/api-methods/addupdate-contact/add-or-update-contact
-
-TODO What level does Bookmark (Last contact_id) come in
-
-===========================================
-NumberOfEmployees	No	
-Title	No	
-Industry	No	
-Phone	No	
-MobilePhone	No	
-Fax	No	
-Website	No	
-MailingStreet	No	
-MailingCity	No	
-MailingState	No	
-MailingPostalCode	No	
-MailingCountry	No	
-owner_name	No	
-LeadSource	No	
-Status	No	
-LinkedIn	No	
-unsubscribed	No	Use this to unsubscribe or re-subscribe contacts. Send a boolean (true/false) value.
-custom	No	See Custom Fields section below
-_autopilot_session_id	No	Used to associate a contact with a session, see Associating Sessions below
-_autopilot_list	No	Used to add this contact to a list upon creation, see Add Contact to a List below
-notify	N
-*/
