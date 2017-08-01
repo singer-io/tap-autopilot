@@ -59,60 +59,75 @@
             "type": ["null", "string"]
         },
         "anywhere_page_visits": {
-            "type": ["null", "object"],
-            "properties": {
-                "url": {
-                    "type": ["null", "string"]
-                },
-                "value": {
-                    "value": ["null", "boolean"]
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "url": {
+                        "type": ["null", "string"]
+                    },
+                    "value": {
+                        "type": ["null", "boolean"]
+                    }
                 }
             }
         },
         "anywhere_utm": {
-            "type": ["null", "object"],
-            "properties": {
-                "url": {
-                    "type": ["null", "string"]
-                },
-                "value": {
-                    "value": ["null", "boolean"]
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "url": {
+                        "type": ["null", "string"]
+                    },
+                    "value": {
+                        "type": ["null", "boolean"]
+                    }
                 }
             }
         },
         "mail_opened": {
-            "type": ["null", "object"],
-            "properties": {
-                "id": {
-                    "type": ["null", "string"]
-                },
-                "timestamp": {
-                    "type": ["null", "string"],
-                    "format": ["date-time"]
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "id": {
+                        "type": ["null", "string"]
+                    },
+                    "timestamp": {
+                        "type": ["null", "string"],
+                        "format": ["date-time"]
+                    }
                 }
             }
         },
         "mail_received": {
-            "type": ["null", "object"],
-            "properties": {
-                "id": {
-                    "type": ["null", "string"]
-                },
-                "timestamp": {
-                    "type": ["null", "string"],
-                    "format": ["date-time"]
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "id": {
+                        "type": ["null", "string"]
+                    },
+                    "timestamp": {
+                        "type": ["null", "string"],
+                        "format": ["date-time"]
+                    }
                 }
             }
         },
         "mail_clicked": {
-            "type": ["null", "object"],
-            "properties": {
-                "id": {
-                    "type": ["null", "string"]
-                },
-                "timestamp": {
-                    "type": ["null", "string"],
-                    "format": ["date-time"]
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "id": {
+                        "type": ["null", "string"]
+                    },
+                    "timestamp": {
+                        "type": ["null", "string"],
+                        "format": ["date-time"]
+                    }
                 }
             }
         }
