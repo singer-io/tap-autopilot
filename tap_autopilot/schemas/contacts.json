@@ -86,6 +86,20 @@
                 }
             }
         },
+        "anywhere_form_submits": {
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "url": {
+                        "type": ["null", "string"]
+                    },
+                    "value": {
+                        "type": ["null", "boolean"]
+                    }
+                }
+            }
+        },
         "mail_opened": {
             "type": ["null", "array"],
             "items": {

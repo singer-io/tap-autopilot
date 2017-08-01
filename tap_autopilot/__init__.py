@@ -15,9 +15,8 @@ import dateutil.parser
 import singer
 import singer.metrics as metrics
 from singer import utils
-from singer import (transform,
-                    UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
-                    Transformer, _transform_datetime)
+from singer import (UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
+                    _transform_datetime)
 
 
 class SourceUnavailableException(Exception):
@@ -100,7 +99,7 @@ def transform_contact(contact):
 
     TODO: Figure out the best way to handle custom fields
     '''
-    boolean_props = ["anywhere_page_visits", "anywhere_utm"]
+    boolean_props = ["anywhere_page_visits", "anywhere_form_submits", "anywhere_utm"]
     timestamp_props = ["mail_received", "mail_opened", "mail_clicked"]
     camel_props = ["MailingCountry", "MailingState"]
 
@@ -176,6 +175,7 @@ def get_url(endpoint, **kwargs):
                       max_tries=5,
                       giveup=client_error,
                       factor=2)
+@utils.ratelimit(20, 1)
 def request(url, params=None):
     '''Make a request to the given Autopilot URL.
     Handles retrying, status checking. Logs request duration and records
