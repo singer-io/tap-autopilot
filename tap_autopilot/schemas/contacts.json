@@ -8,6 +8,14 @@
             "type": ["null", "string"],
             "format": "date-time"
         },
+        "updated_at": {
+            "type": ["null", "string"],
+            "format": "date-time"
+        },
+        "first_visit_at": {
+            "type": ["null", "string"],
+            "format": "date-time"
+        },
         "name": {
             "type": ["null", "string"]
         },
@@ -22,9 +30,18 @@
         },
         "phone": {
             "type": ["null", "string"]
-        }, 
+        },
+        "mailing_country": {
+            "type": ["null", "string"]
+        },
+        "mailing_state": {
+            "type": ["null", "string"]
+        },
         "company": {
             "type": ["null", "string"]
+        },
+        "company_priority": {
+            "type": ["null", "boolean"]
         },
         "status": {
             "type": ["null", "string"]
@@ -40,6 +57,64 @@
         },
         "salutation": {
             "type": ["null", "string"]
+        },
+        "anywhere_page_visits": {
+            "type": ["null", "object"],
+            "properties": {
+                "url": {
+                    "type": ["null", "string"]
+                },
+                "value": {
+                    "value": ["null", "boolean"]
+                }
+            }
+        },
+        "anywhere_utm": {
+            "type": ["null", "object"],
+            "properties": {
+                "url": {
+                    "type": ["null", "string"]
+                },
+                "value": {
+                    "value": ["null", "boolean"]
+                }
+            }
+        },
+        "mail_opened": {
+            "type": ["null", "object"],
+            "properties": {
+                "id": {
+                    "type": ["null", "string"]
+                },
+                "timestamp": {
+                    "type": ["null", "string"],
+                    "format": ["date-time"]
+                }
+            }
+        },
+        "mail_received": {
+            "type": ["null", "object"],
+            "properties": {
+                "id": {
+                    "type": ["null", "string"]
+                },
+                "timestamp": {
+                    "type": ["null", "string"],
+                    "format": ["date-time"]
+                }
+            }
+        },
+        "mail_clicked": {
+            "type": ["null", "object"],
+            "properties": {
+                "id": {
+                    "type": ["null", "string"]
+                },
+                "timestamp": {
+                    "type": ["null", "string"],
+                    "format": ["date-time"]
+                }
+            }
         }
     }
 }
