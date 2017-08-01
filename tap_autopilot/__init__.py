@@ -15,6 +15,9 @@ import dateutil.parser
 import singer
 import singer.metrics as metrics
 from singer import utils
+from singer import (transform,
+                    UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
+                    Transformer, _transform_datetime)
 
 
 class SourceUnavailableException(Exception):
@@ -83,6 +86,39 @@ def parse_key_from_source(source):
         return 'segments'
 
     return source
+
+
+def transform_contact(contact):
+    '''Transform the properties on a contact
+    to be more database friendly
+
+    TODO: Figure out the best way to handle custom fields
+    '''
+    boolean_props = ['anywhere_page_visits', 'anywhere_utm']
+    timestamp_props = ['mail_received', 'mail_opened', 'mail_clicked']
+
+    for prop in boolean_props:
+        if prop in contact:
+            formatted_array = []
+            for row in contact[prop]:
+                formatted_array.append({
+                    "url": row,
+                    "value": contact[prop][row]
+                })
+            contact[prop] = formatted_array
+
+    for prop in timestamp_props:
+        if prop in contact:
+            formatted_array = []
+            for row in contact[prop]:
+                formatted_array.append({
+                    "id": row,
+                    "timestamp": _transform_datetime(
+                        (contact[prop][row]),
+                        UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
+                })
+            contact[prop] = formatted_array
+    return contact
 
 
 def get_start(key):
@@ -191,10 +227,6 @@ def sync_contacts(STATE, catalog):
         "total_contacts": 400,
         "bookmark": "person_9EAF39E4-9AEC-4134-964A-D9D8D54162E7"
     }
-
-    TODO: Handle custom properties so that there aren't
-    unlimited columns in a database
-
     '''
     schema = load_schema("contacts")
     singer.write_schema("contacts", schema, ["contact_id"], catalog.get("stream_alias"))
@@ -203,7 +235,7 @@ def sync_contacts(STATE, catalog):
     params = {bookmark: bookmark}
 
     for row in gen_request(get_url("contacts"), params):
-        singer.write_record("contacts", row)
+        singer.write_record("contacts", transform_contact(row))
         utils.update_state(STATE, "contacts", row["contact_id"])
 
     singer.write_state(STATE)
