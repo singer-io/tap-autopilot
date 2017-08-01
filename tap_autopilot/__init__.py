@@ -88,14 +88,21 @@ def parse_key_from_source(source):
     return source
 
 
+def convert_to_snake(name):
+    '''Convert CamelCase keys to snake_case'''
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+
 def transform_contact(contact):
     '''Transform the properties on a contact
     to be more database friendly
 
     TODO: Figure out the best way to handle custom fields
     '''
-    boolean_props = ['anywhere_page_visits', 'anywhere_utm']
-    timestamp_props = ['mail_received', 'mail_opened', 'mail_clicked']
+    boolean_props = ["anywhere_page_visits", "anywhere_utm"]
+    timestamp_props = ["mail_received", "mail_opened", "mail_clicked"]
+    camel_props = ["MailingCountry", "MailingState"]
 
     for prop in boolean_props:
         if prop in contact:
@@ -118,6 +125,14 @@ def transform_contact(contact):
                         UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
                 })
             contact[prop] = formatted_array
+
+    for prop in camel_props:
+        if prop in contact:
+            value = contact[prop]
+            key = convert_to_snake(prop)
+            del contact[prop]
+            contact[key] = value
+
     return contact
 
 
