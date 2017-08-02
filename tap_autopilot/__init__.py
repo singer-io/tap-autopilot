@@ -27,13 +27,15 @@ class SourceUnavailableException(Exception):
 REQUIRED_CONFIG_KEYS = ["api_key", "user_agent"]
 PER_PAGE = 100
 BASE_URL = "https://api2.autopilothq.com/v1"
+CONFIG = {
+    "api_token": None,
+    "user_agent": None
+}
 
 
 LOGGER = singer.get_logger()
 SESSION = requests.session()
 
-CONFIG = {}
-STATE = {}
 
 ENDPOINTS = {
     "contacts":                "/contacts",
@@ -74,6 +76,7 @@ def parse_source_from_url(url):
 
     raise ValueError("Can't determine stream from URL " + url)
 
+
 def parse_key_from_source(source):
     '''Given an Autopilot source, return the key needed to access the children
        The endpoints for fetching contacts related to a list or segment
@@ -90,8 +93,8 @@ def parse_key_from_source(source):
 
 def convert_to_snake(name):
     '''Convert CamelCase keys to snake_case'''
-    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+    snake_one = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", snake_one).lower()
 
 
 def transform_contact(contact):
@@ -146,17 +149,6 @@ def transform_contact(contact):
     return contact
 
 
-def get_start(key):
-    '''Get the start date from CONFIG or STATE
-
-    TODO: This needs to grab the updated_at for state
-    '''
-    if key not in STATE:
-        STATE[key] = CONFIG["start_date"]
-
-    return STATE[key]
-
-
 def get_current_stream(state):
     '''Retrieve a current stream from STATE if it exists'''
     if "current" in state:
@@ -165,7 +157,7 @@ def get_current_stream(state):
     return None
 
 
-def get_bookmark(key):
+def get_bookmark(STATE, key):
     '''Retrieve a bookmark from STATE if it exists'''
     if key in STATE:
         return "/" + STATE[key]
@@ -209,7 +201,7 @@ def request(url, params=None):
         return resp
 
 
-def gen_request(endpoint, params=None):
+def gen_request(STATE, endpoint, params=None):
     '''Generate a request that will iterate through the results
     and paginate through the responses until the amount of results
     returned is less than 100, the amount returned by the API.
@@ -257,10 +249,10 @@ def sync_contacts(STATE, catalog):
     schema = load_schema("contacts")
     singer.write_schema("contacts", schema, ["contact_id"], catalog.get("stream_alias"))
 
-    bookmark = get_bookmark("contacts")
+    bookmark = get_bookmark(STATE, "contacts")
     params = {bookmark: bookmark}
 
-    for row in gen_request(get_url("contacts"), params):
+    for row in gen_request(STATE, get_url("contacts"), params):
         singer.write_record("contacts", transform_contact(row))
         utils.update_state(STATE, "contacts", row["contact_id"])
 
@@ -292,7 +284,7 @@ def sync_lists(STATE, catalog):
     schema = load_schema("lists")
     singer.write_schema("lists", schema, ["list_id"], catalog.get("stream_alias"))
 
-    for row in gen_request(get_url("lists")):
+    for row in gen_request(STATE, get_url("lists")):
         singer.write_record("lists", row)
         utils.update_state(STATE, "lists", row["list_id"])
 
@@ -312,9 +304,9 @@ def sync_list_contacts(STATE, catalog):
 
     params = {}
 
-    for row in gen_request(get_url("lists"), params):
+    for row in gen_request(STATE, get_url("lists"), params):
         subrow_url = get_url("lists_contacts", list_id=row["list_id"])
-        for subrow in gen_request(subrow_url, params):
+        for subrow in gen_request(STATE, subrow_url, params):
             singer.write_record("lists_contacts", {
                 "list_id": row["list_id"],
                 "contact_id": subrow["contact_id"],
@@ -351,7 +343,7 @@ def sync_smart_segments(STATE, catalog):
     singer.write_schema("smart_segments", schema, ["segment_id"], catalog.get("stream_alias"))
     params = {}
 
-    for row in gen_request(get_url("smart_segments"), params):
+    for row in gen_request(STATE, get_url("smart_segments"), params):
         singer.write_record("smart_segments", row)
         utils.update_state(STATE, "smart_segments", row["segment_id"])
 
@@ -376,9 +368,9 @@ def sync_smart_segment_contacts(STATE, catalog):
         catalog.get("stream_alias"))
     params = {}
 
-    for row in gen_request(get_url("smart_segments"), params):
+    for row in gen_request(STATE, get_url("smart_segments"), params):
         subrow_url = get_url("smart_segments_contacts", segment_id=row["segment_id"])
-        for subrow in gen_request(subrow_url, params):
+        for subrow in gen_request(STATE, subrow_url, params):
             singer.write_record("smart_segments_contacts", {
                 "segment_id": row["segment_id"],
                 "contact_id": subrow["contact_id"]
@@ -386,7 +378,6 @@ def sync_smart_segment_contacts(STATE, catalog):
 
         utils.update_state(STATE, "smart_segments_contacts", row["segment_id"])
         LOGGER.info("Completed Smart Segment's Contacts Sync")
-
 
     singer.write_state(STATE)
     LOGGER.info("Completed Smart Segments Contacts Sync")
@@ -418,9 +409,9 @@ def get_streams_to_sync(streams, state):
         raise Exception("Unknown stream {} in state".format(current_stream))
     return result
 
+
 def get_selected_streams(remaining_streams, annotated_schema):
     selected_streams = []
-
 
     for stream in remaining_streams:
         tap_stream_id = stream.tap_stream_id
@@ -456,6 +447,7 @@ def do_sync(STATE, catalogs):
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
+
 def load_discovered_schema(stream):
     schema = load_schema(stream.tap_stream_id)
     for k in schema['properties']:
@@ -477,11 +469,13 @@ def do_discover():
     LOGGER.info("Loading Schemas")
     json.dump(discover_schemas(), sys.stdout, indent=4)
 
+
 def main():
     '''Entry point'''
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     CONFIG.update(args.config)
+    STATE = {}
 
     if args.state:
         STATE.update(args.state)
