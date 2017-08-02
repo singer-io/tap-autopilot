@@ -20,6 +20,7 @@ from singer import (UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
 
 
 class SourceUnavailableException(Exception):
+    '''Exception for source unavailable'''
     pass
 
 
@@ -358,7 +359,11 @@ def sync_smart_segment_contacts(STATE, catalog):
     }
     '''
     schema = load_schema("smart_segments_contacts")
-    singer.write_schema("smart_segments_contacts", schema, ["segment_id", "contact_id"], catalog.get("stream_alias"))
+    singer.write_schema(
+        "smart_segments_contacts",
+        schema,
+        ["segment_id", "contact_id"],
+        catalog.get("stream_alias"))
     params = {}
 
     for row in gen_request(get_url("smart_segments"), params):
@@ -412,7 +417,6 @@ def get_selected_streams(remaining_streams, annotated_schema):
         for annotated_stream in annotated_schema["streams"]:
             if tap_stream_id == annotated_stream["tap_stream_id"]:
                 schema = annotated_stream["schema"]
-                LOGGER.info(schema)
                 if "selected" in schema and schema["selected"] == True:
                     selected_streams.append(stream)
 
