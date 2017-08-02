@@ -1,6 +1,6 @@
 machine:
   python:
-    version: 3.4.4
+    version: 3.5
 
 dependencies:
   pre:
@@ -8,4 +8,4 @@ dependencies:
 
 test:
   post:
-    - pylint tap_autopilot -d missing-docstring -d logging-format-interpolation -d too-many-locals -d too-many-arguments
+    - pylint tap_hubspot -d C,R,W
