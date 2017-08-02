@@ -53,7 +53,9 @@ def get_abs_path(path):
 
 def load_schema(entity):
     '''Returns the schema for the specified source'''
-    return utils.load_json(get_abs_path("schemas/{}.json".format(entity)))
+    schema = utils.load_json(get_abs_path("schemas/{}.json".format(entity)))
+
+    return schema
 
 
 def client_error(exc):
@@ -104,8 +106,8 @@ def transform_contact(contact):
     TODO: Figure out the best way to handle custom fields
     '''
     boolean_props = ["anywhere_page_visits", "anywhere_form_submits", "anywhere_utm"]
-    timestamp_props = ["mail_received", "mail_opened", "mail_clicked", "mail_hardbounced"]
-    camel_props = ["MailingCountry", "MailingState"]
+    timestamp_props = ["mail_received", "mail_opened", "mail_clicked", "mail_bounced", "mail_complained", "mail_unsubscribed", "mail_hardbounced"]
+    camel_props = ["MailingCountry", "MailingCity", "MailingPostalCode", "MailingStreet", "MailingState"]
 
     for prop in boolean_props:
         if prop in contact:
@@ -418,7 +420,7 @@ def get_selected_streams(remaining_streams, annotated_schema):
         for annotated_stream in annotated_schema["streams"]:
             if tap_stream_id == annotated_stream["tap_stream_id"]:
                 schema = annotated_stream["schema"]
-                if "selected" in schema and schema["selected"] == True:
+                if "selected" in schema and schema["selected"] is True:
                     selected_streams.append(stream)
 
     return selected_streams
