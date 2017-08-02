@@ -110,7 +110,7 @@
                     },
                     "timestamp": {
                         "type": ["null", "string"],
-                        "format": ["date-time"]
+                        "format": "date-time"
                     }
                 }
             }
@@ -125,7 +125,22 @@
                     },
                     "timestamp": {
                         "type": ["null", "string"],
-                        "format": ["date-time"]
+                        "format": "date-time"
+                    }
+                }
+            }
+        },
+        "mail_hardbounced": {
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "id": {
+                        "type": ["null", "string"]
+                    },
+                    "timestamp": {
+                        "type": ["null", "string"],
+                        "format": "date-time"
                     }
                 }
             }
@@ -140,7 +155,7 @@
                     },
                     "timestamp": {
                         "type": ["null", "string"],
-                        "format": ["date-time"]
+                        "format": "date-time"
                     }
                 }
             }

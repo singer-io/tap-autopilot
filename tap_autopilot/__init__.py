@@ -101,7 +101,7 @@ def transform_contact(contact):
     TODO: Figure out the best way to handle custom fields
     '''
     boolean_props = ["anywhere_page_visits", "anywhere_form_submits", "anywhere_utm"]
-    timestamp_props = ["mail_received", "mail_opened", "mail_clicked"]
+    timestamp_props = ["mail_received", "mail_opened", "mail_clicked", "mail_hardbounced"]
     camel_props = ["MailingCountry", "MailingState"]
 
     for prop in boolean_props:
@@ -132,6 +132,16 @@ def transform_contact(contact):
             key = convert_to_snake(prop)
             del contact[prop]
             contact[key] = value
+
+    if "custom_fields" in contact:
+        new_custom_fields = []
+        custom_fields = contact["custom_fields"]
+        for row in custom_fields:
+            new_custom_fields.append({
+                row["kind"]: row["value"]
+            })
+        del contact["custom_fields"]
+
 
     return contact
 
@@ -369,7 +379,7 @@ def sync_smart_segment_contacts(STATE, catalog):
     for row in gen_request(get_url("smart_segments"), params):
         subrow_url = get_url("smart_segments_contacts", segment_id=row["segment_id"])
         for subrow in gen_request(subrow_url, params):
-            singer.write_record("smart_segment_id", {
+            singer.write_record("smart_segments_contacts", {
                 "segment_id": row["segment_id"],
                 "contact_id": subrow["contact_id"]
             })
