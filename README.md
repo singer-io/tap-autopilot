@@ -34,7 +34,31 @@ This tap:
     {"api_key": "your-api-token"}
     ```
 
-4. [Optional] Add additional optional config parameters
+4. Discover and Catalog
+
+    Use the discover flag to explore the schema for each of this tap's resources
+
+    ```bash tap-autopulot --config config.json --discover```
+
+    Pipe the output of this file to a file that will serve as the catalog, where you will select which streams and properties to sync
+
+    `--discover >> catalog.json`
+
+    The catalog is an object with a key streams that has an array of the streams for this tap. For each stream you want to sync, add a `"selected": true` property on the stream object. Below is an example of how you would select to sync the contacts stream. This property is recursive so it will select all children. If you don't want to sync a property, you can add `"selected": false` on that property.
+
+    ```json
+            {
+            "schema": {
+                "properties": {...},
+                "type": "object",
+                "selected": true
+            },
+            "stream": "contacts",
+            "tap_stream_id": "contacts"
+        }
+    ```
+
+5. [Optional] Add additional optional config parameters
 
     You can include two other key-value pairs in your `config.json` to further customize the behavior of this Tap.
     - `start_date` indicates how far back Autopilot should retrieve Contacts data in the absence of a State file, all of the other streams will fully sync on every run. Start dates should conform to the [RFC3339 specification](https://www.ietf.org/rfc/rfc3339.txt).
@@ -50,7 +74,7 @@ This tap:
     }
     ```
 
-5. [Optional] Create the initial state file
+6. [Optional] Create the initial state file
 
     You can provide JSON file that contains a date for the API endpoints
     to force the application to only fetch data newer than those dates.
@@ -62,12 +86,12 @@ This tap:
     }
     ``
 
-6. Run the application
+7. Run the application
 
     `tap-autopilot` can be run with:
 
     ```bash
-    tap-autopilot --config config.json [--state state.json]
+    tap-autopilot --config config.json --catalog catalog.json [--state state.json]
     ```
 
 ---
