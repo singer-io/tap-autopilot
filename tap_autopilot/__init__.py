@@ -58,6 +58,13 @@ def load_schema(entity):
     return schema
 
 
+def get_start():
+    if "start_date" not in CONFIG:
+        return None
+
+    return CONFIG["start_date"]
+
+
 def client_error(exc):
     '''Indicates whether the given RequestException is a 4xx response'''
     return exc.response is not None and 400 <= exc.response.status_code < 500
@@ -253,10 +260,15 @@ def sync_contacts(STATE, catalog):
 
     bookmark = get_bookmark(STATE, "contacts")
     params = {bookmark: bookmark}
+    start = get_start()
 
     for row in gen_request(STATE, get_url("contacts"), params):
-        singer.write_record("contacts", transform_contact(row))
-        utils.update_state(STATE, "contacts", row["contact_id"])
+        if start and "updated_at" in row and start < row["updated_at"]:
+            singer.write_record("contacts", transform_contact(row))
+            utils.update_state(STATE, "contacts", row["contact_id"])
+        else:
+            singer.write_record("contacts", transform_contact(row))
+            utils.update_state(STATE, "contacts", row["contact_id"])
 
     singer.write_state(STATE)
 

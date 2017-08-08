@@ -61,7 +61,7 @@ This tap:
 5. [Optional] Add additional optional config parameters
 
     You can include two other key-value pairs in your `config.json` to further customize the behavior of this Tap.
-    - `start_date` indicates how far back Autopilot should retrieve Contacts data in the absence of a State file, all of the other streams will fully sync on every run. Start dates should conform to the [RFC3339 specification](https://www.ietf.org/rfc/rfc3339.txt).
+    - `start_date` will alter the Contacts stream to only sync contacts that have an `updated_at` value greater than the `start_date` supplied in the config file. If not included, the Contacts stream will sync all contacts. All of the other streams will fully sync on every run regardless of the `start_date`. Start dates should conform to the [RFC3339 specification](https://www.ietf.org/rfc/rfc3339.txt).
     - `user_agent` should be set to something that includes a contact email address should the API provider need to contact you for any reason.
 
     If you were to use both of these, your complete config.json should look something like this.
