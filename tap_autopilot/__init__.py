@@ -115,7 +115,6 @@ def transform_contact(contact):
     '''
     boolean_props = ["anywhere_page_visits", "anywhere_form_submits", "anywhere_utm"]
     timestamp_props = ["mail_received", "mail_opened", "mail_clicked", "mail_bounced", "mail_complained", "mail_unsubscribed", "mail_hardbounced"]
-    camel_props = ["MailingCountry", "MailingCity", "MailingPostalCode", "MailingStreet", "MailingState"]
 
     for prop in boolean_props:
         if prop in contact:
@@ -139,13 +138,6 @@ def transform_contact(contact):
                 })
             contact[prop] = formatted_array
 
-    for prop in camel_props:
-        if prop in contact:
-            value = contact[prop]
-            key = convert_to_snake(prop)
-            del contact[prop]
-            contact[key] = value
-
     if "custom_fields" in contact:
         new_custom_fields = []
         custom_fields = contact["custom_fields"]
@@ -153,8 +145,7 @@ def transform_contact(contact):
             new_custom_fields.append({
                 row["kind"]: row["value"]
             })
-        del contact["custom_fields"]
-
+        contact["custom_fields"] = new_custom_fields
 
     return contact
 
@@ -195,7 +186,7 @@ def request(url, params=None):
     per second
     '''
     headers = {"autopilotapikey": CONFIG["api_key"]}
-    if "user_agent" in CONFIG:
+    if "user_agent" in CONFIG and CONFIG["user_agent"] is not None:
         headers["user-agent"] = CONFIG["user_agent"]
 
     if "bookmark" in params:

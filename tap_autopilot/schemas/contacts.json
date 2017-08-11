@@ -130,6 +130,21 @@
                 }
             }
         },
+        "mail_bounced": {
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "id": {
+                        "type": ["null", "string"]
+                    },
+                    "timestamp": {
+                        "type": ["null", "string"],
+                        "format": "date-time"
+                    }
+                }
+            }
+        },
         "mail_hardbounced": {
             "type": ["null", "array"],
             "items": {
@@ -146,6 +161,36 @@
             }
         },
         "mail_clicked": {
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "id": {
+                        "type": ["null", "string"]
+                    },
+                    "timestamp": {
+                        "type": ["null", "string"],
+                        "format": "date-time"
+                    }
+                }
+            }
+        },
+        "mail_complained": {
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "id": {
+                        "type": ["null", "string"]
+                    },
+                    "timestamp": {
+                        "type": ["null", "string"],
+                        "format": "date-time"
+                    }
+                }
+            }
+        },
+        "mail_unsubscribed": {
             "type": ["null", "array"],
             "items": {
                 "type": ["null", "object"],
