@@ -28,21 +28,30 @@ This tap:
 
 3. Create the config file
 
-    Create a JSON file called `config.json` containing the api key you just generated.
+    Create a JSON file called `config.json` containing the api key you just generated and a start date, the tap will only return contacts who have been updated after the date chosen.
+    Start dates should conform to the [RFC3339 specification](https://www.ietf.org/rfc/rfc3339.txt).
 
     ```json
-    {"api_key": "your-api-token"}
+    {
+        "api_key": "your-autopilot-api-token",
+        "start_date": "2017-01-01T00:00:00Z"
+    }
     ```
 
 4. Discover and Catalog
 
     Use the discover flag to explore the schema for each of this tap's resources
 
-    ```bash tap-autopulot --config config.json --discover```
+    ```bash
+    > tap-autopulot --config config.json --discover
+    ```
 
     Pipe the output of this file to a file that will serve as the catalog, where you will select which streams and properties to sync
 
-    `--discover >> catalog.json`
+    ```bash
+    > touch catalog.json
+    > tap-autopilot --config config.json --discover >> catalog.json
+    ```
 
     The catalog is an object with a key streams that has an array of the streams for this tap. For each stream you want to sync, add a `"selected": true` property on the stream object. Below is an example of how you would select to sync the contacts stream. This property is recursive so it will select all children. If you don't want to sync a property, you can add `"selected": false` on that property.
 
@@ -60,11 +69,10 @@ This tap:
 
 5. [Optional] Add additional optional config parameters
 
-    You can include two other key-value pairs in your `config.json` to further customize the behavior of this Tap.
-    - `start_date` will alter the Contacts stream to only sync contacts that have an `updated_at` value greater than the `start_date` supplied in the config file. If not included, the Contacts stream will sync all contacts. All of the other streams will fully sync on every run regardless of the `start_date`. Start dates should conform to the [RFC3339 specification](https://www.ietf.org/rfc/rfc3339.txt).
+    You can include a `user_agent` key in your `config.json` to further customize the behavior of this Tap.
     - `user_agent` should be set to something that includes a contact email address should the API provider need to contact you for any reason.
 
-    If you were to use both of these, your complete config.json should look something like this.
+    If you were to use the `user_agent`, your complete config.json should look something like this.
 
     ```json
     {
