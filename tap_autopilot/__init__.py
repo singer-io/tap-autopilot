@@ -463,7 +463,7 @@ def do_sync(STATE, catalogs):
         except SourceUnavailableException:
             pass
 
-    singer.set_currently_syncing(STATE, none)
+    singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
