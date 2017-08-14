@@ -40,6 +40,7 @@ SESSION = requests.session()
 
 ENDPOINTS = {
     "contacts":                "/contacts",
+    "custom_fields":           "/contacts/custom_fields",
     "lists_contacts":          "/list/{list_id}/contacts",
     "lists":                   "/lists",
     "smart_segments":          "/smart_segments",
@@ -52,9 +53,67 @@ def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
 
+def get_field_type(field_type):
+    '''Map the field type from Autopilot to Singer Spec'''
+    if field_type == "boolean":
+        return {"type": ["null", "boolean"]}
+
+    elif field_type == "date":
+       return {"type": ["null", "string"], "format": "date-time"}
+
+    elif field_type == "integer":
+        return {"type": ["null", "integer"]}
+
+    elif field_type == "float" or field_type == "number":
+        return {"type": ["null", "number"]}
+
+    else:
+        return {"type": ["null", "string"]}
+
+
+def parse_custom_schema(JSON):
+    '''Parse the custom schema returned from Autopilot and format
+    it into JSON schema format
+    
+    Example Payload:
+    [
+        {
+            "fieldType": "string",
+            "key": "contacts_customfields_1456200756325_ab876950-d9e3-11e5-b21c-31af5a6619a2",
+            "name": "visitedCities"
+        },
+        {
+            "fieldType": "string",
+            "key": "contacts_customfields_1456200763929_b00fb090-d9e3-11e5-b21c-31af5a6619a2",
+            "name": "visitedCountries"
+        }
+    ]
+    '''
+    parsed_schema = []
+    for custom_field in JSON:
+        parsed_schema.append({
+            custom_field["name"]: get_field_type(custom_field["fieldType"])
+        })
+
+    return parsed_schema
+
+
+def load_custom_schema():
+    '''Returns the contacts schema with any custom fields appended'''
+    return parse_custom_schema(request(get_url("custom_fields")).json())
+
+
 def load_schema(entity):
-    '''Returns the schema for the specified source'''
+    '''Returns the schema for the specified source
+    Contacts need to have the custom fields appended'''
     schema = utils.load_json(get_abs_path("schemas/{}.json".format(entity)))
+    
+    if entity is 'contacts':
+        custom_fields = load_custom_schema()
+        schema['properties']['custom'] = {
+            "type": ["null", "array"],
+            "items": custom_fields
+        }
 
     return schema
 
@@ -161,6 +220,7 @@ def get_url(endpoint, **kwargs):
     '''Get the full url for the endpoint'''
     if endpoint not in ENDPOINTS:
         raise ValueError("Invalid endpoint {}".format(endpoint))
+    
 
     return BASE_URL + ENDPOINTS[endpoint].format(**kwargs)
 
@@ -183,7 +243,7 @@ def request(url, params=None):
     if "user_agent" in CONFIG and CONFIG["user_agent"] is not None:
         headers["user-agent"] = CONFIG["user_agent"]
 
-    if "bookmark" in params:
+    if params and "bookmark" in params:
         url = url + "/" + params["bookmark"]
 
     req = requests.Request("GET", url, headers=headers).prepare()
