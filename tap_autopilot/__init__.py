@@ -59,7 +59,14 @@ def load_schema(entity):
     return schema
 
 
-def get_start():
+def get_start(STATE):
+    if "current" in STATE:
+        currentSource = STATE["current"]
+        if "bookmarks" in STATE:
+            bookmarks = STATE["bookmarks"]
+            if "updated_at" in bookmarks[currentSource]:
+                return bookmarks[currentSource]["updated_at"]
+    
     if "start_date" not in CONFIG:
         return None
 
@@ -158,14 +165,6 @@ def get_current_stream(state):
     return None
 
 
-def get_bookmark(STATE, key):
-    '''Retrieve a bookmark from STATE if it exists'''
-    if key in STATE:
-        return "/" + STATE[key]
-
-    return ""
-
-
 def get_url(endpoint, **kwargs):
     '''Get the full url for the endpoint'''
     if endpoint not in ENDPOINTS:
@@ -220,8 +219,7 @@ def gen_request(STATE, endpoint, params=None):
             if 'contact' in source:
                 if "bookmark" in data:
                     params["bookmark"] = data["bookmark"]
-                    utils.update_state(STATE, source, data["bookmark"])
-                    singer.write_state(STATE)
+
                 else:
                     params = {}
                     utils.update_state(STATE, source, None)
@@ -230,6 +228,9 @@ def gen_request(STATE, endpoint, params=None):
             for row in data[source_key]:
                 counter.increment()
                 yield row
+
+            STATE = singer.write_bookmark(STATE, source, 'updated_at', row['updated_at'])
+            singer.write_state(STATE)
 
             if len(data[source_key]) < PER_PAGE:
                 params = {}
@@ -250,18 +251,15 @@ def sync_contacts(STATE, catalog):
     schema = load_schema("contacts")
     singer.write_schema("contacts", schema, ["contact_id"], catalog.get("stream_alias"))
 
-    bookmark = get_bookmark(STATE, "contacts")
-    params = {bookmark: bookmark}
-    start = get_start()
+    params = {}
+    most_recent_updated_time = get_start(STATE)
 
     for row in gen_request(STATE, get_url("contacts"), params):
-        if start and "updated_at" in row and start < row["updated_at"]:
+        if "updated_at" in row and most_recent_updated_time < row["updated_at"]:
             singer.write_record("contacts", transform_contact(row))
-            utils.update_state(STATE, "contacts", row["contact_id"])
-        else:
-            singer.write_record("contacts", transform_contact(row))
-            utils.update_state(STATE, "contacts", row["contact_id"])
+            most_recent_updated_time = row["updated_at"]
 
+    STATE = singer.write_bookmark(STATE, 'contacts', 'updated_at', most_recent_updated_time) 
     singer.write_state(STATE)
 
     LOGGER.info("Completed Contacts Sync")
