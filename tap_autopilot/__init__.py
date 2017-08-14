@@ -201,6 +201,12 @@ def gen_request(STATE, endpoint, params=None):
     and paginate through the responses until the amount of results
     returned is less than 100, the amount returned by the API.
 
+    If the source has 'contact' in it, Autopilot API will provide a
+    'bookmark' property at the top level that is used to paginate
+    results
+
+
+
     The API only returns bookmarks for iterating through contacts
     '''
     params = params or {}
@@ -217,17 +223,11 @@ def gen_request(STATE, endpoint, params=None):
 
                 else:
                     params = {}
-                    utils.update_state(STATE, source, None)
-                    singer.write_state(STATE)
 
             for row in data[source_key]:
                 counter.increment()
                 yield row
             
-            if source is 'contacts':
-                STATE = singer.write_bookmark(STATE, source, 'updated_at', row['updated_at'])
-                singer.write_state(STATE)
-
             if len(data[source_key]) < PER_PAGE:
                 params = {}
                 break
