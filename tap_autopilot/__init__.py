@@ -30,6 +30,8 @@ BASE_URL = "https://api2.autopilothq.com/v1"
 CONFIG = {
     "api_token": None,
     "start_date": None,
+
+    # Optional
     "user_agent": None
 }
 
@@ -71,7 +73,7 @@ def get_field_type(field_type):
 
 
 def parse_custom_schema(JSON):
-    '''Parse the custom schema returned from Autopilot and format
+    '''Parse the custom fields returned from Autopilot and format
     it into JSON schema format
     
     Example Payload:
@@ -437,7 +439,7 @@ def get_selected_streams(remaining_streams, annotated_schema):
 
 
 def do_sync(STATE, catalogs):
-    '''Do a full sync'''
+    '''Sync the streams that were selected'''
     remaining_streams = get_streams_to_sync(STREAMS, STATE)
     selected_streams = get_selected_streams(remaining_streams, catalogs)
     
@@ -466,6 +468,7 @@ def do_sync(STATE, catalogs):
 
 
 def load_discovered_schema(stream):
+    '''Attach inclusion automatic to each schema'''
     schema = load_schema(stream.tap_stream_id)
     for k in schema['properties']:
         schema['properties'][k]['inclusion'] = 'automatic'
@@ -473,6 +476,7 @@ def load_discovered_schema(stream):
 
 
 def discover_schemas():
+    '''Iterate through streams, push to an array and return'''
     result = {'streams': []}
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
@@ -483,6 +487,7 @@ def discover_schemas():
 
 
 def do_discover():
+    '''JSON dump the schemas to stdout'''
     LOGGER.info("Loading Schemas")
     json.dump(discover_schemas(), sys.stdout, indent=4)
 
