@@ -59,7 +59,14 @@ def load_schema(entity):
     return schema
 
 
-def get_start():
+def get_start(STATE):
+    if "currently_syncing" in STATE:
+        currentSource = STATE["currently_syncing"]
+        if "bookmarks" in STATE:
+            bookmarks = STATE["bookmarks"]
+            if "updated_at" in bookmarks[currentSource]:
+                return bookmarks[currentSource]["updated_at"]
+    
     if "start_date" not in CONFIG:
         return None
 
@@ -150,22 +157,6 @@ def transform_contact(contact):
     return contact
 
 
-def get_current_stream(state):
-    '''Retrieve a current stream from STATE if it exists'''
-    if "current" in state:
-        return state["current"]
-
-    return None
-
-
-def get_bookmark(STATE, key):
-    '''Retrieve a bookmark from STATE if it exists'''
-    if key in STATE:
-        return "/" + STATE[key]
-
-    return ""
-
-
 def get_url(endpoint, **kwargs):
     '''Get the full url for the endpoint'''
     if endpoint not in ENDPOINTS:
@@ -182,10 +173,13 @@ def get_url(endpoint, **kwargs):
 @utils.ratelimit(20, 1)
 def request(url, params=None):
     '''Make a request to the given Autopilot URL.
-    Handles retrying, status checking. Logs request duration and records
-    per second
+    Appends Autopilot API bookmark to url if in params
+    
+    Handles retrying, rate-limiting and status checking. 
+    Logs request duration and records per second
     '''
     headers = {"autopilotapikey": CONFIG["api_key"]}
+
     if "user_agent" in CONFIG and CONFIG["user_agent"] is not None:
         headers["user-agent"] = CONFIG["user_agent"]
 
@@ -207,6 +201,12 @@ def gen_request(STATE, endpoint, params=None):
     and paginate through the responses until the amount of results
     returned is less than 100, the amount returned by the API.
 
+    If the source has 'contact' in it, Autopilot API will provide a
+    'bookmark' property at the top level that is used to paginate
+    results
+
+
+
     The API only returns bookmarks for iterating through contacts
     '''
     params = params or {}
@@ -220,17 +220,14 @@ def gen_request(STATE, endpoint, params=None):
             if 'contact' in source:
                 if "bookmark" in data:
                     params["bookmark"] = data["bookmark"]
-                    utils.update_state(STATE, source, data["bookmark"])
-                    singer.write_state(STATE)
+
                 else:
                     params = {}
-                    utils.update_state(STATE, source, None)
-                    singer.write_state(STATE)
 
             for row in data[source_key]:
                 counter.increment()
                 yield row
-
+            
             if len(data[source_key]) < PER_PAGE:
                 params = {}
                 break
@@ -250,18 +247,15 @@ def sync_contacts(STATE, catalog):
     schema = load_schema("contacts")
     singer.write_schema("contacts", schema, ["contact_id"], catalog.get("stream_alias"))
 
-    bookmark = get_bookmark(STATE, "contacts")
-    params = {bookmark: bookmark}
-    start = get_start()
+    params = {}
+    most_recent_updated_time = get_start(STATE)
 
     for row in gen_request(STATE, get_url("contacts"), params):
-        if start and "updated_at" in row and start < row["updated_at"]:
+        if "updated_at" in row and most_recent_updated_time < row["updated_at"]:
             singer.write_record("contacts", transform_contact(row))
-            utils.update_state(STATE, "contacts", row["contact_id"])
-        else:
-            singer.write_record("contacts", transform_contact(row))
-            utils.update_state(STATE, "contacts", row["contact_id"])
+            most_recent_updated_time = row["updated_at"]
 
+    STATE = singer.write_bookmark(STATE, 'contacts', 'updated_at', most_recent_updated_time) 
     singer.write_state(STATE)
 
     LOGGER.info("Completed Contacts Sync")
@@ -406,7 +400,7 @@ STREAMS = [
 
 def get_streams_to_sync(streams, state):
     '''Get the streams to sync'''
-    current_stream = get_current_stream(state)
+    current_stream = singer.get_currently_syncing(state)
     result = streams
     if current_stream:
         result = list(itertools.dropwhile(
@@ -434,12 +428,17 @@ def do_sync(STATE, catalogs):
     '''Do a full sync'''
     remaining_streams = get_streams_to_sync(STREAMS, STATE)
     selected_streams = get_selected_streams(remaining_streams, catalogs)
+    
+    if len(selected_streams) < 1:
+        LOGGER.info("No Streams selected, please check that you have a schema selected in your catalog")
+        return
+
     LOGGER.info("Starting sync. Will sync these streams: %s",
                 [stream.tap_stream_id for stream in selected_streams])
 
     for stream in selected_streams:
         LOGGER.info("Syncing %s", stream.tap_stream_id)
-        utils.update_state(STATE, "current", stream.tap_stream_id)
+        utils.update_state(STATE, "currently_syncing", stream.tap_stream_id)
         singer.write_state(STATE)
 
         try:
@@ -449,7 +448,7 @@ def do_sync(STATE, catalogs):
         except SourceUnavailableException:
             pass
 
-    utils.update_state(STATE, "current", None)
+    utils.update_state(STATE, "currently_syncing", None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
