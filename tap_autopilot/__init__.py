@@ -404,6 +404,7 @@ class Stream(object):
     tap_stream_id = attr.ib()
     sync = attr.ib()
 
+
 STREAMS = [
     Stream("contacts", sync_contacts),
     Stream("lists", sync_lists),
