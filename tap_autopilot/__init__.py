@@ -432,6 +432,11 @@ def do_sync(STATE, catalogs):
     '''Do a full sync'''
     remaining_streams = get_streams_to_sync(STREAMS, STATE)
     selected_streams = get_selected_streams(remaining_streams, catalogs)
+    
+    if len(selected_streams) < 1:
+        LOGGER.info("No Streams selected, please check that you have a schema selected in your catalog")
+        return
+
     LOGGER.info("Starting sync. Will sync these streams: %s",
                 [stream.tap_stream_id for stream in selected_streams])
 
