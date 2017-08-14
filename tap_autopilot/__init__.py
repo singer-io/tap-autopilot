@@ -164,17 +164,13 @@ def parse_key_from_source(source):
     return source
 
 
-def convert_to_snake(name):
-    '''Convert CamelCase keys to snake_case'''
-    snake_one = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", snake_one).lower()
-
-
 def transform_contact(contact):
     '''Transform the properties on a contact
     to be more database friendly
 
-    TODO: Figure out the best way to handle custom fields
+    Do this explicitly for the boolean and timestamp props
+
+    Do it dynamically for custom fields on the contact
     '''
     boolean_props = ["anywhere_page_visits", "anywhere_form_submits", "anywhere_utm"]
     timestamp_props = ["mail_received", "mail_opened", "mail_clicked", "mail_bounced", "mail_complained", "mail_unsubscribed", "mail_hardbounced"]
@@ -208,7 +204,7 @@ def transform_contact(contact):
             new_custom_fields.append({
                 row["kind"]: row["value"]
             })
-        contact["custom_fields"] = new_custom_fields
+        contact["custom"] = new_custom_fields
 
     return contact
 
