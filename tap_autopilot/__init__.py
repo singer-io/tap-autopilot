@@ -30,6 +30,8 @@ BASE_URL = "https://api2.autopilothq.com/v1"
 CONFIG = {
     "api_token": None,
     "start_date": None,
+
+    # Optional
     "user_agent": None
 }
 
@@ -40,7 +42,7 @@ SESSION = requests.session()
 
 ENDPOINTS = {
     "contacts":                "/contacts",
-    "lists_contacts":          "/list/{list_id}/contacts",
+    "custom_fields":           "/contacts/custom_fields",
     "lists":                   "/lists",
     "smart_segments":          "/smart_segments",
     "smart_segments_contacts": "/smart_segments/{segment_id}/contacts",
@@ -52,26 +54,77 @@ def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
 
+def get_field_type(field_type):
+    '''Map the field type from Autopilot to Singer Spec'''
+    if field_type == "boolean":
+        return {"type": ["null", "boolean"]}
+
+    elif field_type == "date":
+       return {"type": ["null", "string"], "format": "date-time"}
+
+    elif field_type == "integer":
+        return {"type": ["null", "integer"]}
+
+    elif field_type == "float" or field_type == "number":
+        return {"type": ["null", "number"]}
+
+    else:
+        return {"type": ["null", "string"]}
+
+
+def parse_custom_schema(JSON):
+    '''Parse the custom fields returned from Autopilot and format
+    it into JSON schema format
+    
+    Example Payload:
+    [
+        {
+            "fieldType": "string",
+            "key": "contacts_customfields_1456200756325_ab876950-d9e3-11e5-b21c-31af5a6619a2",
+            "name": "visitedCities"
+        },
+        {
+            "fieldType": "string",
+            "key": "contacts_customfields_1456200763929_b00fb090-d9e3-11e5-b21c-31af5a6619a2",
+            "name": "visitedCountries"
+        }
+    ]
+    '''
+    parsed_schema = []
+    for custom_field in JSON:
+        parsed_schema.append({
+            custom_field["name"]: get_field_type(custom_field["fieldType"])
+        })
+
+    return parsed_schema
+
+
+def load_custom_schema():
+    '''Returns custom fields added to Contacts in Autopilot'''
+    return parse_custom_schema(request(get_url("custom_fields")).json())
+
+
 def load_schema(entity):
-    '''Returns the schema for the specified source'''
+    '''Returns the schema for the specified source
+    Contacts need to have the custom fields appended'''
     schema = utils.load_json(get_abs_path("schemas/{}.json".format(entity)))
+    
+    if entity is 'contacts':
+        custom_fields = load_custom_schema()
+        schema['properties']['custom'] = {
+            "type": ["null", "array"],
+            "items": custom_fields
+        }
 
     return schema
 
 
-def get_start(STATE):
-    if "currently_syncing" in STATE:
-        currentSource = STATE["currently_syncing"]
-        if "bookmarks" in STATE:
-            bookmarks = STATE["bookmarks"]
-            if "updated_at" in bookmarks[currentSource]:
-                return bookmarks[currentSource]["updated_at"]
+def get_start(STATE, tap_stream_id, bookmark_key):
+    current_bookmark = singer.get_bookmark(STATE, tap_stream_id, bookmark_key)
+    if current_bookmark is None:
+        return CONFIG["start_date"]
     
-    if "start_date" not in CONFIG:
-        return None
-
-    return CONFIG["start_date"]
-
+    return current_bookmark
 
 def client_error(exc):
     '''Indicates whether the given RequestException is a 4xx response'''
@@ -85,9 +138,7 @@ def parse_source_from_url(url):
 
     if match:
         if match.group(1) == "contacts":
-            if "/list/" in match.group(0):
-                return "lists_contacts"
-            elif "segment" in match.group(0):
+            if "segment" in match.group(0):
                 return "smart_segments_contacts"
         return match.group(1)
 
@@ -108,17 +159,13 @@ def parse_key_from_source(source):
     return source
 
 
-def convert_to_snake(name):
-    '''Convert CamelCase keys to snake_case'''
-    snake_one = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", snake_one).lower()
-
-
 def transform_contact(contact):
     '''Transform the properties on a contact
     to be more database friendly
 
-    TODO: Figure out the best way to handle custom fields
+    Do this explicitly for the boolean and timestamp props
+
+    Do it dynamically for custom fields on the contact
     '''
     boolean_props = ["anywhere_page_visits", "anywhere_form_submits", "anywhere_utm"]
     timestamp_props = ["mail_received", "mail_opened", "mail_clicked", "mail_bounced", "mail_complained", "mail_unsubscribed", "mail_hardbounced"]
@@ -152,7 +199,7 @@ def transform_contact(contact):
             new_custom_fields.append({
                 row["kind"]: row["value"]
             })
-        contact["custom_fields"] = new_custom_fields
+        contact["custom"] = new_custom_fields
 
     return contact
 
@@ -161,6 +208,7 @@ def get_url(endpoint, **kwargs):
     '''Get the full url for the endpoint'''
     if endpoint not in ENDPOINTS:
         raise ValueError("Invalid endpoint {}".format(endpoint))
+    
 
     return BASE_URL + ENDPOINTS[endpoint].format(**kwargs)
 
@@ -183,7 +231,7 @@ def request(url, params=None):
     if "user_agent" in CONFIG and CONFIG["user_agent"] is not None:
         headers["user-agent"] = CONFIG["user_agent"]
 
-    if "bookmark" in params:
+    if params and "bookmark" in params:
         url = url + "/" + params["bookmark"]
 
     req = requests.Request("GET", url, headers=headers).prepare()
@@ -248,7 +296,7 @@ def sync_contacts(STATE, catalog):
     singer.write_schema("contacts", schema, ["contact_id"], catalog.get("stream_alias"))
 
     params = {}
-    most_recent_updated_time = get_start(STATE)
+    most_recent_updated_time = get_start(STATE, "contacts", "updated_at")
 
     for row in gen_request(STATE, get_url("contacts"), params):
         if "updated_at" in row and most_recent_updated_time < row["updated_at"]:
@@ -286,37 +334,8 @@ def sync_lists(STATE, catalog):
 
     for row in gen_request(STATE, get_url("lists")):
         singer.write_record("lists", row)
-        utils.update_state(STATE, "lists", row["list_id"])
 
-    singer.write_state(STATE)
     LOGGER.info("Completed Lists Sync")
-    return STATE
-
-
-def sync_list_contacts(STATE, catalog):
-    '''Sync the contacts on a given list from the Autopilot API'''
-    schema = load_schema("lists_contacts")
-    singer.write_schema(
-        "lists_contacts",
-        schema,
-        ["list_id", "contact_id"],
-        catalog.get("stream_alias"))
-
-    params = {}
-
-    for row in gen_request(STATE, get_url("lists"), params):
-        subrow_url = get_url("lists_contacts", list_id=row["list_id"])
-        for subrow in gen_request(STATE, subrow_url, params):
-            singer.write_record("lists_contacts", {
-                "list_id": row["list_id"],
-                "contact_id": subrow["contact_id"],
-            })
-
-        utils.update_state(STATE, "lists_contacts", row["list_id"])
-        LOGGER.info("Completed List's Contacts Sync")
-
-    singer.write_state(STATE)
-    LOGGER.info("Completed List Contacts Sync")
     return STATE
 
 
@@ -345,9 +364,7 @@ def sync_smart_segments(STATE, catalog):
 
     for row in gen_request(STATE, get_url("smart_segments"), params):
         singer.write_record("smart_segments", row)
-        utils.update_state(STATE, "smart_segments", row["segment_id"])
 
-    singer.write_state(STATE)
     LOGGER.info("Completed Smart Segments Sync")
     return STATE
 
@@ -376,10 +393,8 @@ def sync_smart_segment_contacts(STATE, catalog):
                 "contact_id": subrow["contact_id"]
             })
 
-        utils.update_state(STATE, "smart_segments_contacts", row["segment_id"])
         LOGGER.info("Completed Smart Segment's Contacts Sync")
 
-    singer.write_state(STATE)
     LOGGER.info("Completed Smart Segments Contacts Sync")
     return STATE
 
@@ -389,10 +404,10 @@ class Stream(object):
     tap_stream_id = attr.ib()
     sync = attr.ib()
 
+
 STREAMS = [
     Stream("contacts", sync_contacts),
     Stream("lists", sync_lists),
-    Stream("lists_contacts", sync_list_contacts),
     Stream("smart_segments", sync_smart_segments),
     Stream("smart_segments_contacts", sync_smart_segment_contacts)
 ]
@@ -425,7 +440,7 @@ def get_selected_streams(remaining_streams, annotated_schema):
 
 
 def do_sync(STATE, catalogs):
-    '''Do a full sync'''
+    '''Sync the streams that were selected'''
     remaining_streams = get_streams_to_sync(STREAMS, STATE)
     selected_streams = get_selected_streams(remaining_streams, catalogs)
     
@@ -438,7 +453,7 @@ def do_sync(STATE, catalogs):
 
     for stream in selected_streams:
         LOGGER.info("Syncing %s", stream.tap_stream_id)
-        utils.update_state(STATE, "currently_syncing", stream.tap_stream_id)
+        singer.set_currently_syncing(STATE, stream.tap_stream_id)
         singer.write_state(STATE)
 
         try:
@@ -448,12 +463,13 @@ def do_sync(STATE, catalogs):
         except SourceUnavailableException:
             pass
 
-    utils.update_state(STATE, "currently_syncing", None)
+    singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
 
 def load_discovered_schema(stream):
+    '''Attach inclusion automatic to each schema'''
     schema = load_schema(stream.tap_stream_id)
     for k in schema['properties']:
         schema['properties'][k]['inclusion'] = 'automatic'
@@ -461,6 +477,7 @@ def load_discovered_schema(stream):
 
 
 def discover_schemas():
+    '''Iterate through streams, push to an array and return'''
     result = {'streams': []}
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
@@ -471,6 +488,7 @@ def discover_schemas():
 
 
 def do_discover():
+    '''JSON dump the schemas to stdout'''
     LOGGER.info("Loading Schemas")
     json.dump(discover_schemas(), sys.stdout, indent=4)
 
