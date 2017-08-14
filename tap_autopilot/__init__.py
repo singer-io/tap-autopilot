@@ -41,7 +41,6 @@ SESSION = requests.session()
 ENDPOINTS = {
     "contacts":                "/contacts",
     "custom_fields":           "/contacts/custom_fields",
-    "lists_contacts":          "/list/{list_id}/contacts",
     "lists":                   "/lists",
     "smart_segments":          "/smart_segments",
     "smart_segments_contacts": "/smart_segments/{segment_id}/contacts",
@@ -144,9 +143,7 @@ def parse_source_from_url(url):
 
     if match:
         if match.group(1) == "contacts":
-            if "/list/" in match.group(0):
-                return "lists_contacts"
-            elif "segment" in match.group(0):
+            if "segment" in match.group(0):
                 return "smart_segments_contacts"
         return match.group(1)
 
@@ -353,33 +350,6 @@ def sync_lists(STATE, catalog):
     return STATE
 
 
-def sync_list_contacts(STATE, catalog):
-    '''Sync the contacts on a given list from the Autopilot API'''
-    schema = load_schema("lists_contacts")
-    singer.write_schema(
-        "lists_contacts",
-        schema,
-        ["list_id", "contact_id"],
-        catalog.get("stream_alias"))
-
-    params = {}
-
-    for row in gen_request(STATE, get_url("lists"), params):
-        subrow_url = get_url("lists_contacts", list_id=row["list_id"])
-        for subrow in gen_request(STATE, subrow_url, params):
-            singer.write_record("lists_contacts", {
-                "list_id": row["list_id"],
-                "contact_id": subrow["contact_id"],
-            })
-
-        utils.update_state(STATE, "lists_contacts", row["list_id"])
-        LOGGER.info("Completed List's Contacts Sync")
-
-    singer.write_state(STATE)
-    LOGGER.info("Completed List Contacts Sync")
-    return STATE
-
-
 def sync_smart_segments(STATE, catalog):
     '''Sync all smart segments from the Autopilot API
 
@@ -452,7 +422,6 @@ class Stream(object):
 STREAMS = [
     Stream("contacts", sync_contacts),
     Stream("lists", sync_lists),
-    Stream("lists_contacts", sync_list_contacts),
     Stream("smart_segments", sync_smart_segments),
     Stream("smart_segments_contacts", sync_smart_segment_contacts)
 ]
