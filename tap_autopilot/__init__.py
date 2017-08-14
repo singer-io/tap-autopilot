@@ -98,7 +98,7 @@ def parse_custom_schema(JSON):
 
 
 def load_custom_schema():
-    '''Returns the contacts schema with any custom fields appended'''
+    '''Returns custom fields added to Contacts in Autopilot'''
     return parse_custom_schema(request(get_url("custom_fields")).json())
 
 
@@ -117,19 +117,12 @@ def load_schema(entity):
     return schema
 
 
-def get_start(STATE):
-    if "currently_syncing" in STATE:
-        currentSource = STATE["currently_syncing"]
-        if "bookmarks" in STATE:
-            bookmarks = STATE["bookmarks"]
-            if "updated_at" in bookmarks[currentSource]:
-                return bookmarks[currentSource]["updated_at"]
+def get_start(STATE, tap_stream_id, bookmark_key):
+    current_bookmark = singer.get_bookmark(STATE, tap_stream_id, bookmark_key)
+    if current_bookmark is None:
+        return CONFIG["start_date"]
     
-    if "start_date" not in CONFIG:
-        return None
-
-    return CONFIG["start_date"]
-
+    return current_bookmark
 
 def client_error(exc):
     '''Indicates whether the given RequestException is a 4xx response'''
@@ -301,7 +294,7 @@ def sync_contacts(STATE, catalog):
     singer.write_schema("contacts", schema, ["contact_id"], catalog.get("stream_alias"))
 
     params = {}
-    most_recent_updated_time = get_start(STATE)
+    most_recent_updated_time = get_start(STATE, "contacts", "updated_at")
 
     for row in gen_request(STATE, get_url("contacts"), params):
         if "updated_at" in row and most_recent_updated_time < row["updated_at"]:
@@ -339,9 +332,7 @@ def sync_lists(STATE, catalog):
 
     for row in gen_request(STATE, get_url("lists")):
         singer.write_record("lists", row)
-        utils.update_state(STATE, "lists", row["list_id"])
 
-    singer.write_state(STATE)
     LOGGER.info("Completed Lists Sync")
     return STATE
 
@@ -371,9 +362,7 @@ def sync_smart_segments(STATE, catalog):
 
     for row in gen_request(STATE, get_url("smart_segments"), params):
         singer.write_record("smart_segments", row)
-        utils.update_state(STATE, "smart_segments", row["segment_id"])
 
-    singer.write_state(STATE)
     LOGGER.info("Completed Smart Segments Sync")
     return STATE
 
@@ -402,10 +391,8 @@ def sync_smart_segment_contacts(STATE, catalog):
                 "contact_id": subrow["contact_id"]
             })
 
-        utils.update_state(STATE, "smart_segments_contacts", row["segment_id"])
         LOGGER.info("Completed Smart Segment's Contacts Sync")
 
-    singer.write_state(STATE)
     LOGGER.info("Completed Smart Segments Contacts Sync")
     return STATE
 
@@ -463,7 +450,7 @@ def do_sync(STATE, catalogs):
 
     for stream in selected_streams:
         LOGGER.info("Syncing %s", stream.tap_stream_id)
-        utils.update_state(STATE, "currently_syncing", stream.tap_stream_id)
+        singer.set_currently_syncing(STATE, stream.tap_stream_id)
         singer.write_state(STATE)
 
         try:
@@ -473,7 +460,7 @@ def do_sync(STATE, catalogs):
         except SourceUnavailableException:
             pass
 
-    utils.update_state(STATE, "currently_syncing", None)
+    singer.set_currently_syncing(STATE, none)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
