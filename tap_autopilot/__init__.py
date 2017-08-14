@@ -60,8 +60,8 @@ def load_schema(entity):
 
 
 def get_start(STATE):
-    if "current" in STATE:
-        currentSource = STATE["current"]
+    if "currently_syncing" in STATE:
+        currentSource = STATE["currently_syncing"]
         if "bookmarks" in STATE:
             bookmarks = STATE["bookmarks"]
             if "updated_at" in bookmarks[currentSource]:
@@ -157,14 +157,6 @@ def transform_contact(contact):
     return contact
 
 
-def get_current_stream(state):
-    '''Retrieve a current stream from STATE if it exists'''
-    if "current" in state:
-        return state["current"]
-
-    return None
-
-
 def get_url(endpoint, **kwargs):
     '''Get the full url for the endpoint'''
     if endpoint not in ENDPOINTS:
@@ -181,10 +173,13 @@ def get_url(endpoint, **kwargs):
 @utils.ratelimit(20, 1)
 def request(url, params=None):
     '''Make a request to the given Autopilot URL.
-    Handles retrying, status checking. Logs request duration and records
-    per second
+    Appends Autopilot API bookmark to url if in params
+    
+    Handles retrying, rate-limiting and status checking. 
+    Logs request duration and records per second
     '''
     headers = {"autopilotapikey": CONFIG["api_key"]}
+
     if "user_agent" in CONFIG and CONFIG["user_agent"] is not None:
         headers["user-agent"] = CONFIG["user_agent"]
 
@@ -228,9 +223,10 @@ def gen_request(STATE, endpoint, params=None):
             for row in data[source_key]:
                 counter.increment()
                 yield row
-
-            STATE = singer.write_bookmark(STATE, source, 'updated_at', row['updated_at'])
-            singer.write_state(STATE)
+            
+            if source is 'contacts':
+                STATE = singer.write_bookmark(STATE, source, 'updated_at', row['updated_at'])
+                singer.write_state(STATE)
 
             if len(data[source_key]) < PER_PAGE:
                 params = {}
@@ -404,7 +400,7 @@ STREAMS = [
 
 def get_streams_to_sync(streams, state):
     '''Get the streams to sync'''
-    current_stream = get_current_stream(state)
+    current_stream = singer.get_currently_syncing(state)
     result = streams
     if current_stream:
         result = list(itertools.dropwhile(
@@ -442,7 +438,7 @@ def do_sync(STATE, catalogs):
 
     for stream in selected_streams:
         LOGGER.info("Syncing %s", stream.tap_stream_id)
-        utils.update_state(STATE, "current", stream.tap_stream_id)
+        utils.update_state(STATE, "currently_syncing", stream.tap_stream_id)
         singer.write_state(STATE)
 
         try:
@@ -452,7 +448,7 @@ def do_sync(STATE, catalogs):
         except SourceUnavailableException:
             pass
 
-    utils.update_state(STATE, "current", None)
+    utils.update_state(STATE, "currently_syncing", None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
