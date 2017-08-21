@@ -28,7 +28,7 @@ REQUIRED_CONFIG_KEYS = ["api_key", "start_date"]
 PER_PAGE = 100
 BASE_URL = "https://api2.autopilothq.com/v1"
 CONFIG = {
-    "api_token": None,
+    "api_key": None,
     "start_date": None,
 
     # Optional
