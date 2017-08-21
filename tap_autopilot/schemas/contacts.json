@@ -16,6 +16,10 @@
             "type": ["null", "string"],
             "format": "date-time"
         },
+	"first_conversion_at": {
+	    "type": ["null", "string"],
+	    "format": "date-time"
+	},
         "name": {
             "type": ["null", "string"]
         },

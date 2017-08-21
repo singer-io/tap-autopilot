@@ -12,7 +12,7 @@ setup(name='tap-autopilot',
       py_modules=['tap_autopilot'],
       install_requires=[
           'attrs==16.3.0',
-          'singer-python==3.0.0',
+          'singer-python==3.1.0',
           'requests==2.12.4',
           'backoff==1.3.2'
       ],
@@ -22,13 +22,7 @@ setup(name='tap-autopilot',
       ''',
       packages=['tap_autopilot'],
       package_data={
-          'tap_autopilot/schemas': [
-              "contacts.json",
-              "lists_contacts.json",
-              "lists.json",
-              "smart_segments_contacts.json",
-              "smart_segments.json",
-          ],
+          'tap_autopilot/schemas': ["*.json"]
       },
       include_package_data=True,
      )

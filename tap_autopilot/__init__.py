@@ -53,68 +53,9 @@ def get_abs_path(path):
     '''Returns the absolute path'''
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
-
-def get_field_type(field_type):
-    '''Map the field type from Autopilot to Singer Spec'''
-    if field_type == "boolean":
-        return {"type": ["null", "boolean"]}
-
-    elif field_type == "date":
-       return {"type": ["null", "string"], "format": "date-time"}
-
-    elif field_type == "integer":
-        return {"type": ["null", "integer"]}
-
-    elif field_type == "float" or field_type == "number":
-        return {"type": ["null", "number"]}
-
-    else:
-        return {"type": ["null", "string"]}
-
-
-def parse_custom_schema(JSON):
-    '''Parse the custom fields returned from Autopilot and format
-    it into JSON schema format
-    
-    Example Payload:
-    [
-        {
-            "fieldType": "string",
-            "key": "contacts_customfields_1456200756325_ab876950-d9e3-11e5-b21c-31af5a6619a2",
-            "name": "visitedCities"
-        },
-        {
-            "fieldType": "string",
-            "key": "contacts_customfields_1456200763929_b00fb090-d9e3-11e5-b21c-31af5a6619a2",
-            "name": "visitedCountries"
-        }
-    ]
-    '''
-    parsed_schema = []
-    for custom_field in JSON:
-        parsed_schema.append({
-            custom_field["name"]: get_field_type(custom_field["fieldType"])
-        })
-
-    return parsed_schema
-
-
-def load_custom_schema():
-    '''Returns custom fields added to Contacts in Autopilot'''
-    return parse_custom_schema(request(get_url("custom_fields")).json())
-
-
 def load_schema(entity):
-    '''Returns the schema for the specified source
-    Contacts need to have the custom fields appended'''
+    '''Returns the schema for the specified source'''
     schema = utils.load_json(get_abs_path("schemas/{}.json".format(entity)))
-    
-    if entity is 'contacts':
-        custom_fields = load_custom_schema()
-        schema['properties']['custom'] = {
-            "type": ["null", "array"],
-            "items": custom_fields
-        }
 
     return schema
 
@@ -164,8 +105,6 @@ def transform_contact(contact):
     to be more database friendly
 
     Do this explicitly for the boolean and timestamp props
-
-    Do it dynamically for custom fields on the contact
     '''
     boolean_props = ["anywhere_page_visits", "anywhere_form_submits", "anywhere_utm"]
     timestamp_props = ["mail_received", "mail_opened", "mail_clicked", "mail_bounced", "mail_complained", "mail_unsubscribed", "mail_hardbounced"]
@@ -191,15 +130,6 @@ def transform_contact(contact):
                         UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
                 })
             contact[prop] = formatted_array
-
-    if "custom_fields" in contact:
-        new_custom_fields = []
-        custom_fields = contact["custom_fields"]
-        for row in custom_fields:
-            new_custom_fields.append({
-                row["kind"]: row["value"]
-            })
-        contact["custom"] = new_custom_fields
 
     return contact
 
@@ -296,14 +226,26 @@ def sync_contacts(STATE, catalog):
     singer.write_schema("contacts", schema, ["contact_id"], catalog.get("stream_alias"))
 
     params = {}
-    most_recent_updated_time = get_start(STATE, "contacts", "updated_at")
+    start = utils.strptime_with_tz(get_start(STATE, "contacts", "updated_at"))
+
+    LOGGER.info("Only syncing contacts updated since " + utils.strftime(start))
+    max_updated_at = start
 
     for row in gen_request(STATE, get_url("contacts"), params):
-        if "updated_at" in row and most_recent_updated_time < row["updated_at"]:
-            singer.write_record("contacts", transform_contact(row))
-            most_recent_updated_time = row["updated_at"]
+        updated_at = None
+        if "updated_at" in row:
+            updated_at = utils.strptime_with_tz(
+                _transform_datetime( # pylint: disable=protected-access
+                    row["updated_at"],
+                    UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
-    STATE = singer.write_bookmark(STATE, 'contacts', 'updated_at', most_recent_updated_time) 
+        if not updated_at or updated_at >= start:
+            singer.write_record("contacts", transform_contact(row))
+
+        if updated_at and updated_at > max_updated_at:
+            max_updated_at = updated_at
+
+    STATE = singer.write_bookmark(STATE, 'contacts', 'updated_at', utils.strftime(max_updated_at)) 
     singer.write_state(STATE)
 
     LOGGER.info("Completed Contacts Sync")
