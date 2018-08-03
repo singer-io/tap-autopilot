@@ -69,7 +69,7 @@ def get_start(STATE, tap_stream_id, bookmark_key):
 
 def client_error(exc):
     '''Indicates whether the given RequestException is a 4xx response'''
-    return exc.response is not None and 400 <= exc.response.status_code < 500
+    return exc.response is not None and exc.response.status_code != 408 and 400 <= exc.response.status_code < 500
 
 
 def parse_source_from_url(url):
