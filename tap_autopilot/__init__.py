@@ -174,7 +174,7 @@ def request(url, params=None):
         return resp
 
 
-def gen_request(STATE, endpoint, params=None):
+def gen_request(endpoint, params=None):
     '''Generate a request that will iterate through the results
     and paginate through the responses until the amount of results
     returned is less than 100, the amount returned by the API.
@@ -237,7 +237,7 @@ def sync_contacts(STATE, stream):
     LOGGER.info("Only syncing contacts updated since " + utils.strftime(start))
     max_updated_at = start
 
-    for row in gen_request(STATE, get_url(tap_stream_id)):
+    for row in gen_request(get_url(tap_stream_id)):
         updated_at = None
         if "updated_at" in row:
             updated_at = utils.strptime_with_tz(
@@ -387,7 +387,7 @@ def sync(state, stream):
 def do_sync(STATE, catalog):
     '''Sync the streams that were selected'''
     remaining_streams = get_streams_to_sync(catalog, STATE)
-    selected_streams = get_selected_streams(remaining_streams, catalog)
+    selected_streams = get_selected_streams(remaining_streams)
 
     if len(selected_streams) < 1:
         LOGGER.info("No Streams selected, please check that you have a schema selected in your catalog")
