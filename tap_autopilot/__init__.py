@@ -411,7 +411,7 @@ def do_sync(STATE, catalog):
 def discover_schemas():
     '''Iterate through streams, push to an array and return'''
     result = {'streams': []}
-    for tap_stream_id, key_properties in STREAMS:
+    for tap_stream_id, key_properties in STREAMS.items():
         LOGGER.info('Loading schema for %s', tap_stream_id)
         schema = load_schema(tap_stream_id)
 
