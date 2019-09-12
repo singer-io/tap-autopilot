@@ -94,7 +94,7 @@ def parse_key_from_source(source):
     if 'contact' in source:
         return 'contacts'
 
-    elif 'smart_segments' in source:
+    if 'smart_segments' in source:
         return 'segments'
 
     return source

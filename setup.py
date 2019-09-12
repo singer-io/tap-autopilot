@@ -16,6 +16,13 @@ setup(name='tap-autopilot',
           'requests==2.20.0',
           'backoff==1.8.0'
       ],
+      extras_require={
+          'dev': [
+              'pylint',
+              'ipdb',
+              'nose',
+          ]
+      },
       entry_points='''
           [console_scripts]
           tap-autopilot=tap_autopilot:main
