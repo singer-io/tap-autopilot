@@ -386,7 +386,7 @@ def sync(state, stream):
 
 def do_sync(STATE, catalog):
     '''Sync the streams that were selected'''
-    remaining_streams = get_streams_to_sync(catalog, STATE)
+    remaining_streams = get_streams_to_sync(catalog['streams'], STATE)
     selected_streams = get_selected_streams(remaining_streams)
 
     if len(selected_streams) < 1:
