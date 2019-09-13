@@ -8,8 +8,8 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            virtualenv -p python3 ~/.virtualenvs/tap-autopilot
-            source ~/.virtualenvs/tap-autopilot/bin/activate
+            virtualenv -p python3 /usr/local/share/virtualenvs/tap-autopilot
+            source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
             pip install .[dev]
       - run:
           name: 'pylint'
@@ -20,7 +20,7 @@ jobs:
           name: 'JSON Validator'
           command: |
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            stitch-validate-json ~/.virtualenvs/tap-autopilot/lib/python3.5/site-packages/tap_autopilot/schemas/*.json
+            stitch-validate-json /usr/local/share/virtualenvs/tap-autopilot/lib/python3.5/site-packages/tap_autopilot/schemas/*.json
       # - run:
       #     name: 'Unit Tests'
       #     command: |

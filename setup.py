@@ -14,7 +14,8 @@ setup(name='tap-autopilot',
           'attrs==16.3.0',
           'singer-python==5.8.1',
           'requests==2.20.0',
-          'backoff==1.8.0'
+          'backoff==1.8.0',
+          'pendulum==1.2.0'
       ],
       extras_require={
           'dev': [
