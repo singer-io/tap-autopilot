@@ -343,14 +343,14 @@ def sync_smart_segment_contacts(STATE, stream):
     LOGGER.info("Completed Smart Segments Contacts Sync")
     return STATE
 
-
-# {tap_stream_id: [key_properties]}
-STREAMS = {
-    "contacts" : ["contact_id"],
-    "lists": ["list_id"],
-    "smart_segments": ["segment_id"],
-    "smart_segments_contacts": ["segment_id", "contact_id"]
-}
+# List entries of the form:
+# (tap_stream_id, [key_properties])
+STREAMS = [
+    ("contacts", ["contact_id"]),
+    ("lists", ["list_id"]),
+    ("smart_segments", ["segment_id"]),
+    ("smart_segments_contacts", ["segment_id", "contact_id"])
+]
 
 
 def get_streams_to_sync(streams, state):
@@ -419,7 +419,7 @@ def do_sync(STATE, catalog):
 def discover_schemas():
     '''Iterate through streams, push to an array and return'''
     result = {'streams': []}
-    for tap_stream_id, key_properties in STREAMS.items():
+    for tap_stream_id, key_properties in STREAMS:
         LOGGER.info('Loading schema for %s', tap_stream_id)
         schema = load_schema(tap_stream_id)
 
