@@ -226,18 +226,19 @@ def sync_contacts(STATE, stream):
     STATE - State dictionary
     stream - Stream dictionary from the catalog
     '''
-    mdata = metadata.to_map(stream['metadata'])
     tap_stream_id = stream['tap_stream_id']
     singer.write_schema(tap_stream_id,
                         stream['schema'],
                         ["contact_id"])
 
+    # NB: Params is modified in gen_request by reference
+    params = {}
     start = utils.strptime_with_tz(get_start(STATE, tap_stream_id, "updated_at"))
 
     LOGGER.info("Only syncing contacts updated since " + utils.strftime(start))
     max_updated_at = start
 
-    for row in gen_request(STATE, get_url(tap_stream_id)):
+    for row in gen_request(STATE, get_url(tap_stream_id), params):
         updated_at = None
         if "updated_at" in row:
             updated_at = utils.strptime_with_tz(
@@ -306,8 +307,10 @@ def sync_smart_segments(STATE, stream):
 
     '''
     singer.write_schema("smart_segments", stream['schema'], ["segment_id"])
+    # NB: Params is modified in gen_request by reference
+    params = {}
 
-    for row in gen_request(STATE, get_url("smart_segments")):
+    for row in gen_request(STATE, get_url("smart_segments"), params):
         singer.write_record("smart_segments", row)
 
     LOGGER.info("Completed Smart Segments Sync")
@@ -326,10 +329,12 @@ def sync_smart_segment_contacts(STATE, stream):
         "smart_segments_contacts",
         stream['schema'],
         ["segment_id", "contact_id"])
+    # NB: Params is modified in gen_request by reference
+    params = {}
 
-    for row in gen_request(STATE, get_url("smart_segments")):
+    for row in gen_request(STATE, get_url("smart_segments"), params):
         subrow_url = get_url("smart_segments_contacts", segment_id=row["segment_id"])
-        for subrow in gen_request(STATE, subrow_url):
+        for subrow in gen_request(STATE, subrow_url, params):
             singer.write_record("smart_segments_contacts", {
                 "segment_id": row["segment_id"],
                 "contact_id": subrow["contact_id"]
