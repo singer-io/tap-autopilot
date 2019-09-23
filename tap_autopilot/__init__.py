@@ -230,7 +230,7 @@ def sync_contacts(STATE, stream):
     tap_stream_id = stream['tap_stream_id']
     singer.write_schema(tap_stream_id,
                         stream['schema'],
-                        metadata.get(mdata, (), 'table-key-properties'))
+                        ["contact_id"])
 
     start = utils.strptime_with_tz(get_start(STATE, tap_stream_id, "updated_at"))
 
@@ -420,9 +420,6 @@ def discover_schemas():
 
         mdata = metadata.new()
         mdata = metadata.write(mdata, (), 'table-key-properties', key_properties)
-
-        if tap_stream_id == 'contacts':
-            mdata = metadata.write(mdata, (), 'valid-replication-keys', ['updated_at'])
 
         for field_name in schema['properties'].keys():
             mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'automatic')
