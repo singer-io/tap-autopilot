@@ -174,7 +174,7 @@ def request(url, params=None):
         return resp
 
 
-def gen_request(endpoint, params=None):
+def gen_request(STATE, endpoint, params=None):
     '''Generate a request that will iterate through the results
     and paginate through the responses until the amount of results
     returned is less than 100, the amount returned by the API.
@@ -237,7 +237,7 @@ def sync_contacts(STATE, stream):
     LOGGER.info("Only syncing contacts updated since " + utils.strftime(start))
     max_updated_at = start
 
-    for row in gen_request(get_url(tap_stream_id)):
+    for row in gen_request(STATE, get_url(tap_stream_id)):
         updated_at = None
         if "updated_at" in row:
             updated_at = utils.strptime_with_tz(
@@ -258,7 +258,7 @@ def sync_contacts(STATE, stream):
     return STATE
 
 
-def sync_lists(stream):
+def sync_lists(STATE, stream):
     '''Sync all lists from the Autopilot API
 
     The API returns data in the following format
@@ -279,13 +279,14 @@ def sync_lists(stream):
     '''
     singer.write_schema("lists", stream['schema'], ["list_id"])
 
-    for row in gen_request(get_url("lists")):
+    for row in gen_request(STATE, get_url("lists")):
         singer.write_record("lists", row)
 
     LOGGER.info("Completed Lists Sync")
+    return STATE
 
 
-def sync_smart_segments(stream):
+def sync_smart_segments(STATE, stream):
     '''Sync all smart segments from the Autopilot API
 
     The API returns data in the following format
@@ -306,13 +307,14 @@ def sync_smart_segments(stream):
     '''
     singer.write_schema("smart_segments", stream['schema'], ["segment_id"])
 
-    for row in gen_request(get_url("smart_segments")):
+    for row in gen_request(STATE, get_url("smart_segments")):
         singer.write_record("smart_segments", row)
 
     LOGGER.info("Completed Smart Segments Sync")
+    return STATE
 
 
-def sync_smart_segment_contacts(stream):
+def sync_smart_segment_contacts(STATE, stream):
     '''Sync the contacts on a given smart segment from the Autopilot API
 
     {
@@ -325,15 +327,16 @@ def sync_smart_segment_contacts(stream):
         stream['schema'],
         ["segment_id", "contact_id"])
 
-    for row in gen_request(get_url("smart_segments")):
+    for row in gen_request(STATE, get_url("smart_segments")):
         subrow_url = get_url("smart_segments_contacts", segment_id=row["segment_id"])
-        for subrow in gen_request(subrow_url):
+        for subrow in gen_request(STATE, subrow_url):
             singer.write_record("smart_segments_contacts", {
                 "segment_id": row["segment_id"],
                 "contact_id": subrow["contact_id"]
             })
 
     LOGGER.info("Completed Smart Segments Contacts Sync")
+    return STATE
 
 
 # {tap_stream_id: [key_properties]}
@@ -376,11 +379,11 @@ def sync(state, stream):
     if stream['tap_stream_id'] == 'contacts':
         return_val = sync_contacts(state, stream)
     elif stream['tap_stream_id'] == 'lists':
-        sync_lists(stream)
+        return_val = sync_lists(state, stream)
     elif stream['tap_stream_id'] == 'smart_segments':
-        sync_smart_segments(stream)
+        return_val = sync_smart_segments(state, stream)
     elif stream['tap_stream_id'] == 'smart_segments_contacts':
-        sync_smart_segment_contacts(stream)
+        return_val = sync_smart_segment_contacts(state, stream)
 
     return return_val
 
