@@ -14,7 +14,7 @@ import requests
 import dateutil.parser
 import singer
 import singer.metrics as metrics
-from singer import utils
+from singer import utils, metadata
 from singer import (UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                     _transform_datetime)
 
@@ -64,7 +64,7 @@ def get_start(STATE, tap_stream_id, bookmark_key):
     current_bookmark = singer.get_bookmark(STATE, tap_stream_id, bookmark_key)
     if current_bookmark is None:
         return CONFIG["start_date"]
-    
+
     return current_bookmark
 
 def client_error(exc):
@@ -94,7 +94,7 @@ def parse_key_from_source(source):
     if 'contact' in source:
         return 'contacts'
 
-    elif 'smart_segments' in source:
+    if 'smart_segments' in source:
         return 'segments'
 
     return source
@@ -138,7 +138,7 @@ def get_url(endpoint, **kwargs):
     '''Get the full url for the endpoint'''
     if endpoint not in ENDPOINTS:
         raise ValueError("Invalid endpoint {}".format(endpoint))
-    
+
 
     return BASE_URL + ENDPOINTS[endpoint].format(**kwargs)
 
@@ -152,8 +152,8 @@ def get_url(endpoint, **kwargs):
 def request(url, params=None):
     '''Make a request to the given Autopilot URL.
     Appends Autopilot API bookmark to url if in params
-    
-    Handles retrying, rate-limiting and status checking. 
+
+    Handles retrying, rate-limiting and status checking.
     Logs request duration and records per second
     '''
     headers = {"autopilotapikey": CONFIG["api_key"]}
@@ -205,13 +205,13 @@ def gen_request(STATE, endpoint, params=None):
             for row in data[source_key]:
                 counter.increment()
                 yield row
-            
+
             if len(data[source_key]) < PER_PAGE:
                 params = {}
                 break
 
 
-def sync_contacts(STATE, catalog):
+def sync_contacts(STATE, stream):
     '''Sync contacts from the Autopilot API
 
     The API returns data in the following format
@@ -221,17 +221,24 @@ def sync_contacts(STATE, catalog):
         "total_contacts": 400,
         "bookmark": "person_9EAF39E4-9AEC-4134-964A-D9D8D54162E7"
     }
-    '''
-    schema = load_schema("contacts")
-    singer.write_schema("contacts", schema, ["contact_id"], catalog.get("stream_alias"))
 
+    Params:
+    STATE - State dictionary
+    stream - Stream dictionary from the catalog
+    '''
+    tap_stream_id = stream['tap_stream_id']
+    singer.write_schema(tap_stream_id,
+                        stream['schema'],
+                        ["contact_id"])
+
+    # NB: Params is modified in gen_request by reference
     params = {}
-    start = utils.strptime_with_tz(get_start(STATE, "contacts", "updated_at"))
+    start = utils.strptime_with_tz(get_start(STATE, tap_stream_id, "updated_at"))
 
     LOGGER.info("Only syncing contacts updated since " + utils.strftime(start))
     max_updated_at = start
 
-    for row in gen_request(STATE, get_url("contacts"), params):
+    for row in gen_request(STATE, get_url(tap_stream_id), params):
         updated_at = None
         if "updated_at" in row:
             updated_at = utils.strptime_with_tz(
@@ -240,19 +247,19 @@ def sync_contacts(STATE, catalog):
                     UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
         if not updated_at or updated_at >= start:
-            singer.write_record("contacts", transform_contact(row))
+            singer.write_record(tap_stream_id, transform_contact(row))
 
         if updated_at and updated_at > max_updated_at:
             max_updated_at = updated_at
 
-    STATE = singer.write_bookmark(STATE, 'contacts', 'updated_at', utils.strftime(max_updated_at)) 
+    STATE = singer.write_bookmark(STATE, tap_stream_id, "updated_at", utils.strftime(max_updated_at))
     singer.write_state(STATE)
 
     LOGGER.info("Completed Contacts Sync")
     return STATE
 
 
-def sync_lists(STATE, catalog):
+def sync_lists(STATE, stream):
     '''Sync all lists from the Autopilot API
 
     The API returns data in the following format
@@ -271,8 +278,7 @@ def sync_lists(STATE, catalog):
      }
 
     '''
-    schema = load_schema("lists")
-    singer.write_schema("lists", schema, ["list_id"], catalog.get("stream_alias"))
+    singer.write_schema("lists", stream['schema'], ["list_id"])
 
     for row in gen_request(STATE, get_url("lists")):
         singer.write_record("lists", row)
@@ -281,7 +287,7 @@ def sync_lists(STATE, catalog):
     return STATE
 
 
-def sync_smart_segments(STATE, catalog):
+def sync_smart_segments(STATE, stream):
     '''Sync all smart segments from the Autopilot API
 
     The API returns data in the following format
@@ -300,8 +306,8 @@ def sync_smart_segments(STATE, catalog):
     }
 
     '''
-    schema = load_schema("smart_segments")
-    singer.write_schema("smart_segments", schema, ["segment_id"], catalog.get("stream_alias"))
+    singer.write_schema("smart_segments", stream['schema'], ["segment_id"])
+    # NB: Params is modified in gen_request by reference
     params = {}
 
     for row in gen_request(STATE, get_url("smart_segments"), params):
@@ -311,7 +317,7 @@ def sync_smart_segments(STATE, catalog):
     return STATE
 
 
-def sync_smart_segment_contacts(STATE, catalog):
+def sync_smart_segment_contacts(STATE, stream):
     '''Sync the contacts on a given smart segment from the Autopilot API
 
     {
@@ -319,12 +325,11 @@ def sync_smart_segment_contacts(STATE, catalog):
         "total_contacts": 2
     }
     '''
-    schema = load_schema("smart_segments_contacts")
     singer.write_schema(
         "smart_segments_contacts",
-        schema,
-        ["segment_id", "contact_id"],
-        catalog.get("stream_alias"))
+        stream['schema'],
+        ["segment_id", "contact_id"])
+    # NB: Params is modified in gen_request by reference
     params = {}
 
     for row in gen_request(STATE, get_url("smart_segments"), params):
@@ -335,23 +340,16 @@ def sync_smart_segment_contacts(STATE, catalog):
                 "contact_id": subrow["contact_id"]
             })
 
-        LOGGER.info("Completed Smart Segment's Contacts Sync")
-
     LOGGER.info("Completed Smart Segments Contacts Sync")
     return STATE
 
-
-@attr.s
-class Stream(object):
-    tap_stream_id = attr.ib()
-    sync = attr.ib()
-
-
+# List entries of the form:
+# (tap_stream_id, [key_properties])
 STREAMS = [
-    Stream("contacts", sync_contacts),
-    Stream("lists", sync_lists),
-    Stream("smart_segments", sync_smart_segments),
-    Stream("smart_segments_contacts", sync_smart_segment_contacts)
+    ("contacts", ["contact_id"]),
+    ("lists", ["list_id"]),
+    ("smart_segments", ["segment_id"]),
+    ("smart_segments_contacts", ["segment_id", "contact_id"])
 ]
 
 
@@ -360,72 +358,84 @@ def get_streams_to_sync(streams, state):
     current_stream = singer.get_currently_syncing(state)
     result = streams
     if current_stream:
-        result = list(itertools.dropwhile(
-            lambda x: x.tap_stream_id != current_stream, streams))
+        result = list(itertools.dropwhile(lambda x: x.get('tap_stream_id') != current_stream,
+                                          streams))
     if not result:
         raise Exception("Unknown stream {} in state".format(current_stream))
     return result
 
 
-def get_selected_streams(remaining_streams, annotated_schema):
+def get_selected_streams(remaining_streams):
     selected_streams = []
 
     for stream in remaining_streams:
-        tap_stream_id = stream.tap_stream_id
-        for annotated_stream in annotated_schema["streams"]:
-            if tap_stream_id == annotated_stream["tap_stream_id"]:
-                schema = annotated_stream["schema"]
-                if "selected" in schema and schema["selected"] is True:
-                    selected_streams.append(stream)
+        mdata = metadata.to_map(stream.get('metadata'))
+
+        if metadata.get(mdata, (), 'selected') == True:
+            selected_streams.append(stream)
+        else:
+            singer.log_info("%s: not selected", stream["tap_stream_id"])
 
     return selected_streams
 
+def sync(state, stream):
+    return_val = state
 
-def do_sync(STATE, catalogs):
+    if stream['tap_stream_id'] == 'contacts':
+        return_val = sync_contacts(state, stream)
+    elif stream['tap_stream_id'] == 'lists':
+        return_val = sync_lists(state, stream)
+    elif stream['tap_stream_id'] == 'smart_segments':
+        return_val = sync_smart_segments(state, stream)
+    elif stream['tap_stream_id'] == 'smart_segments_contacts':
+        return_val = sync_smart_segment_contacts(state, stream)
+
+    return return_val
+
+def do_sync(STATE, catalog):
     '''Sync the streams that were selected'''
-    remaining_streams = get_streams_to_sync(STREAMS, STATE)
-    selected_streams = get_selected_streams(remaining_streams, catalogs)
-    
+    remaining_streams = get_streams_to_sync(catalog['streams'], STATE)
+    selected_streams = get_selected_streams(remaining_streams)
+
     if len(selected_streams) < 1:
         LOGGER.info("No Streams selected, please check that you have a schema selected in your catalog")
         return
 
     LOGGER.info("Starting sync. Will sync these streams: %s",
-                [stream.tap_stream_id for stream in selected_streams])
+                [stream['tap_stream_id'] for stream in selected_streams])
 
     for stream in selected_streams:
-        LOGGER.info("Syncing %s", stream.tap_stream_id)
-        singer.set_currently_syncing(STATE, stream.tap_stream_id)
+        LOGGER.info("Syncing %s", stream['tap_stream_id'])
+        singer.set_currently_syncing(STATE, stream['tap_stream_id'])
         singer.write_state(STATE)
 
-        try:
-            catalog = [c for c in catalogs.get('streams')
-                       if c.get('stream') == stream.tap_stream_id][0]
-            STATE = stream.sync(STATE, catalog)
-        except SourceUnavailableException:
-            pass
+        STATE = sync(STATE, stream)
 
     singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
 
-def load_discovered_schema(stream):
-    '''Attach inclusion automatic to each schema'''
-    schema = load_schema(stream.tap_stream_id)
-    for k in schema['properties']:
-        schema['properties'][k]['inclusion'] = 'automatic'
-    return schema
-
-
 def discover_schemas():
     '''Iterate through streams, push to an array and return'''
     result = {'streams': []}
-    for stream in STREAMS:
-        LOGGER.info('Loading schema for %s', stream.tap_stream_id)
-        result['streams'].append({'stream': stream.tap_stream_id,
-                                  'tap_stream_id': stream.tap_stream_id,
-                                  'schema': load_discovered_schema(stream)})
+    for tap_stream_id, key_properties in STREAMS:
+        LOGGER.info('Loading schema for %s', tap_stream_id)
+        schema = load_schema(tap_stream_id)
+
+        mdata = metadata.new()
+        mdata = metadata.write(mdata, (), 'table-key-properties', key_properties)
+
+        for field_name in schema['properties'].keys():
+            mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'automatic')
+
+        result['streams'].append({
+            'stream': tap_stream_id,
+            'tap_stream_id': tap_stream_id,
+            'schema': schema,
+            'metadata': metadata.to_list(mdata)
+        })
+
     return result
 
 
