@@ -175,17 +175,9 @@ def request(url, params=None):
 
 
 def gen_request(STATE, endpoint, params=None):
-    '''Generate a request that will iterate through the results
-    and paginate through the responses until the amount of results
-    returned is less than 100, the amount returned by the API.
-
-    If the source has 'contact' in it, Autopilot API will provide a
-    'bookmark' property at the top level that is used to paginate
-    results
-
-
-
-    The API only returns bookmarks for iterating through contacts
+    '''Yields results from requests executed against the provided endpoint,
+    transparently paginating through multiple requests if the endpoint has
+    a "bookmark" parameter for pagination.
     '''
     params = params or {}
 
@@ -195,19 +187,14 @@ def gen_request(STATE, endpoint, params=None):
     with metrics.record_counter(source) as counter:
         while True:
             data = request(endpoint, params).json()
-            if 'contact' in source:
-                if "bookmark" in data:
-                    params["bookmark"] = data["bookmark"]
-
-                else:
-                    params = {}
 
             for row in data[source_key]:
                 counter.increment()
                 yield row
 
-            if len(data[source_key]) < PER_PAGE:
-                params = {}
+            if "bookmark" in data:
+                params["bookmark"] = data["bookmark"]
+            else:
                 break
 
 
@@ -231,14 +218,12 @@ def sync_contacts(STATE, stream):
                         stream['schema'],
                         ["contact_id"])
 
-    # NB: Params is modified in gen_request by reference
-    params = {}
     start = utils.strptime_with_tz(get_start(STATE, tap_stream_id, "updated_at"))
 
     LOGGER.info("Only syncing contacts updated since " + utils.strftime(start))
     max_updated_at = start
 
-    for row in gen_request(STATE, get_url(tap_stream_id), params):
+    for row in gen_request(STATE, get_url(tap_stream_id)):
         updated_at = None
         if "updated_at" in row:
             updated_at = utils.strptime_with_tz(
@@ -307,10 +292,8 @@ def sync_smart_segments(STATE, stream):
 
     '''
     singer.write_schema("smart_segments", stream['schema'], ["segment_id"])
-    # NB: Params is modified in gen_request by reference
-    params = {}
 
-    for row in gen_request(STATE, get_url("smart_segments"), params):
+    for row in gen_request(STATE, get_url("smart_segments")):
         singer.write_record("smart_segments", row)
 
     LOGGER.info("Completed Smart Segments Sync")
@@ -329,12 +312,10 @@ def sync_smart_segment_contacts(STATE, stream):
         "smart_segments_contacts",
         stream['schema'],
         ["segment_id", "contact_id"])
-    # NB: Params is modified in gen_request by reference
-    params = {}
 
-    for row in gen_request(STATE, get_url("smart_segments"), params):
+    for row in gen_request(STATE, get_url("smart_segments")):
         subrow_url = get_url("smart_segments_contacts", segment_id=row["segment_id"])
-        for subrow in gen_request(STATE, subrow_url, params):
+        for subrow in gen_request(STATE, subrow_url):
             singer.write_record("smart_segments_contacts", {
                 "segment_id": row["segment_id"],
                 "contact_id": subrow["contact_id"]
