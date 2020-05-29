@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/singer-io/tap-autopilot.svg?style=svg)](https://circleci.com/gh/singer-io/tap-autopilot)
 
-This is a [Singer](https://singer.io) tap that produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
+This is a [Singer](https://singer.io) tap that produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/docs/SPEC.md).
 
 This tap:
 - Pulls raw data from Autopilot's [REST API](http://docs.autopilot.apiary.io/)
@@ -43,7 +43,7 @@ This tap:
     Use the discover flag to explore the schema for each of this tap's resources
 
     ```bash
-    > tap-autopulot --config config.json --discover
+    > tap-autopilot --config config.json --discover
     ```
 
     Pipe the output of this file to a file that will serve as the catalog, where you will select which streams and properties to sync
