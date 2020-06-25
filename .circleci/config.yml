@@ -46,6 +46,7 @@ workflows:
   commit:
     jobs:
       - build
+          context: circleci-user
   build_daily:
     triggers:
       - schedule:
@@ -56,3 +57,4 @@ workflows:
                 - master
     jobs:
       - build
+          context: circleci-user
