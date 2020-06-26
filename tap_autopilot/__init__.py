@@ -185,17 +185,16 @@ def gen_request(STATE, endpoint, params=None):
     source_key = parse_key_from_source(source)
 
     with metrics.record_counter(source) as counter:
-        while True:
+        bookmark = ""
+        while bookmark is not None:
             data = request(endpoint, params).json()
 
             for row in data[source_key]:
                 counter.increment()
                 yield row
 
-            if "bookmark" in data:
-                params["bookmark"] = data["bookmark"]
-            else:
-                break
+            bookmark = data.get("bookmark", None)
+            params["bookmark"] = bookmark
 
 
 def sync_contacts(STATE, stream):
