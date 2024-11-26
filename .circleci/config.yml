@@ -10,6 +10,7 @@ jobs:
           command: |
             virtualenv -p python3 /usr/local/share/virtualenvs/tap-autopilot
             source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
+            pip install -U pip setuptools
             pip install .[dev]
       - run:
           name: 'pylint'
