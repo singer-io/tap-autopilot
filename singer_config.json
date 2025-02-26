@@ -1,0 +1,54 @@
+{
+    "tap_name": "Autopilot",
+    "required_config_keys": ["api_key", "start_date"],
+    "page_size": 100,
+    "next_page_key": "next_page",
+    "pagination_key": "page",
+    "headers": {"Accept": "application/json"},
+    "params": {},
+    "auth_header_key": "autopilotapikey",
+    "auth_config_key": "api_key",
+    "base_url": "https://api2.autopilothq.com/v1",
+    "streams": [
+      {
+        "name": "contacts",
+        "key_properties": ["contact_id"],
+        "replication_method": "INCREMENTAL",
+        "replication_keys": ["updated_at"],
+        "path": "contacts",
+        "data_key": "contacts"
+      },
+      {
+        "name": "lists",
+        "key_properties": ["list_id"],
+        "replication_method": "FULL_TABLE",
+        "path": "lists",
+        "data_key": "lists"
+      },
+      {
+        "name": "smart_segments",
+        "key_properties": ["segment_id"],
+        "replication_keys": ["FULL_TABLE"],
+        "path": "smart_segments",
+        "data_key": "segments"
+      },
+      {
+        "name": "smart_segments_contacts",
+        "key_properties": ["segment_id", "contact_id"],
+        "replication_method": "FULL_TABLE",
+        "path": "smart_segments/{}/contacts",
+        "data_key": "smart_segments_contacts"
+      }
+    ],
+    "tap_tester_creds": {
+      "client_id": "TAP_HARVEST_CLIENT_ID"
+    },
+    "author": "Stitch",
+    "third_party_dependencies": [
+      "attrs==16.3.0",
+      "singer-python==5.8.1",
+      "requests==2.20.0",
+      "backoff==1.8.0",
+      "pendulum==1.2.0"
+    ]
+  }
