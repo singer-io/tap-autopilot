@@ -2,19 +2,19 @@
 
 This is a [Singer](https://singer.io) tap that produces JSON-formatted data
 following the [Singer
-spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
+spec](https://github.com/singer-io/getting-started/blob/master/docs/SPEC.md).
 
 This tap:
 
 - Pulls raw data from the [Autopilot API].
 - Extracts the following resources:
-    - Contacts(https://github.com/singer-io)
+    - Contacts(http://docs.autopilot.apiary.io/#reference/api-methods/get-all-contacts/get-all-contacts)
 
-    - Lists(https://github.com/singer-io)
+    - Lists(https://autopilot.docs.apiary.io/#reference/api-methods/lists/get-list-of-lists)
 
-    - Smart_segments(https://github.com/singer-io)
+    - Smart_segments(https://autopilot.docs.apiary.io/#reference/api-methods/smart-segments/get-list-of-smart-segments)
 
-    - Smart_segments_contacts(https://github.com/singer-io)
+    - Smart_segments_contacts(https://autopilot.docs.apiary.io/#reference/api-methods/get-contacts-on-smart-segment/get-contacts-on-smart-segment)
 
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
@@ -23,22 +23,22 @@ This tap:
 ## Streams
 
 
-** [contacts](https://github.com/singer-io)**
+** [contacts](http://docs.autopilot.apiary.io/#reference/api-methods/get-all-contacts/get-all-contacts)**
 - Data Key = contacts
 - Primary keys: ['contact_id']
 - Replication strategy: INCREMENTAL
 
-** [lists](https://github.com/singer-io)**
+** [lists](https://autopilot.docs.apiary.io/#reference/api-methods/lists/get-list-of-lists)**
 - Data Key = lists
 - Primary keys: ['list_id']
 - Replication strategy: FULL_TABLE
 
-** [smart_segments](https://github.com/singer-io)**
+** [smart_segments](https://autopilot.docs.apiary.io/#reference/api-methods/smart-segments/get-list-of-smart-segments)**
 - Data Key = segments
 - Primary keys: ['segment_id']
-- Replication strategy: 
+- Replication strategy:
 
-** [smart_segments_contacts](https://github.com/singer-io)**
+** [smart_segments_contacts](https://autopilot.docs.apiary.io/#reference/api-methods/get-contacts-on-smart-segment/get-contacts-on-smart-segment)**
 - Data Key = smart_segments_contacts
 - Primary keys: ['segment_id', 'contact_id']
 - Replication strategy: FULL_TABLE
@@ -66,7 +66,7 @@ This tap:
     > pip install singer-python
     > pip install target-stitch
     > pip install target-json
-    
+
     ```
     - [singer-tools](https://github.com/singer-io/singer-tools)
     - [target-stitch](https://github.com/singer-io/target-stitch)
@@ -75,14 +75,14 @@ This tap:
    - `start_date` - the default value to use if no bookmark exists for an endpoint (rfc3339 date string)
    - `user_agent` (string, optional): Process and email for API logging purposes. Example: `tap-autopilot <api_user_email@your_company.com>`
    - `request_timeout` (integer, `300`): Max time for which request should wait to get a response. Default request_timeout is 300 seconds.
-   
+
     ```json
     {
         "start_date": "2019-01-01T00:00:00Z",
         "user_agent": "tap-autopilot <api_user_email@your_company.com>",
         "request_timeout": 300,
         ...
-    }
+    }```
 
     Optionally, also create a `state.json` file. `currently_syncing` is an optional attribute used for identifying the last object to be synced in case the job is interrupted mid-stream. The next run would begin where the last job left off.
 
@@ -103,9 +103,9 @@ This tap:
     tap-autopilot --config config.json --discover > catalog.json
     ```
    See the Singer docs on discovery mode
-   [here](https://github.com/singer-io/getting-started/blob/master/docs/DISCOVERY_MODE.md
+   [here](https://github.com/singer-io/getting-started/blob/master/docs/DISCOVERY_MODE.md)
 
-5. Run the Tap in Sync Mode (with catalog) and [write out to state file](https://github.com/singer-io/getting-started/blob/master/docs/RUNNING_AND_DEVELOPING.md
+5. Run the Tap in Sync Mode (with catalog) and [write out to state file](https://github.com/singer-io/getting-started/blob/master/docs/RUNNING_AND_DEVELOPING.md)
 
     For Sync mode:
     ```bash
@@ -124,9 +124,9 @@ This tap:
     ```
 
 6. Test the Tap
-    
+
     While developing the autopilot tap, the following utilities were run in accordance with Singer.io best practices:
-    Pylint to improve [code quality](https://github.com/singer-io/getting-started/blob/master/docs/BEST_PRACTICES.md
+    Pylint to improve [code quality](https://github.com/singer-io/getting-started/blob/master/docs/BEST_PRACTICES.md)
     ```bash
     > pylint tap_autopilot -d missing-docstring -d logging-format-interpolation -d too-many-locals -d too-many-arguments
     ```
@@ -135,9 +135,9 @@ This tap:
     Your code has been rated at 9.67/10
     ```
 
-    To [check the tap](https://github.com/singer-io/singer-tools
+    To [check the tap](https://github.com/singer-io/singer-tools)
     ```bash
-    > tap-mixpanel --config tap_config.json --catalog catalog.json | singer-check-tap > state.json
+    > tap-autopilot --config tap_config.json --catalog catalog.json | singer-check-tap > state.json
     > tail -1 state.json > state.json.tmp && mv state.json.tmp state.json
     ```
 

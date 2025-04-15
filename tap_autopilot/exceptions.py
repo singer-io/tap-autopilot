@@ -1,5 +1,5 @@
 class AutopilotError(Exception):
-    """class representing Generic Http error."""
+    """Class representing Generic Http error."""
 
     def __init__(self, message=None, response=None):
         super().__init__(message)
@@ -8,73 +8,73 @@ class AutopilotError(Exception):
 
 
 class AutopilotBackoffError(AutopilotError):
-    """class representing backoff error handling."""
+    """Class representing backoff error handling."""
 
     pass
 
 
 class AutopilotBadRequestError(AutopilotError):
-    """class representing 400 status code."""
+    """Class representing 400 status code."""
 
     pass
 
 
 class AutopilotUnauthorizedError(AutopilotError):
-    """class representing 401 status code."""
+    """Class representing 401 status code."""
 
     pass
 
 
 class AutopilotForbiddenError(AutopilotError):
-    """class representing 403 status code."""
+    """Class representing 403 status code."""
 
     pass
 
 
 class AutopilotNotFoundError(AutopilotError):
-    """class representing 404 status code."""
+    """Class representing 404 status code."""
 
     pass
 
 
 class AutopilotConflictError(AutopilotError):
-    """class representing 406 status code."""
+    """Class representing 406 status code."""
 
     pass
 
 
 class AutopilotUnprocessableEntityError(AutopilotBackoffError):
-    """class representing 409 status code."""
+    """Class representing 409 status code."""
 
     pass
 
 
 class AutopilotRateLimitError(AutopilotBackoffError):
-    """class representing 429 status code."""
+    """Class representing 429 status code."""
 
     pass
 
 
 class AutopilotInternalServerError(AutopilotBackoffError):
-    """class representing 500 status code."""
+    """Class representing 500 status code."""
 
     pass
 
 
 class AutopilotNotImplementedError(AutopilotBackoffError):
-    """class representing 501 status code."""
+    """Class representing 501 status code."""
 
     pass
 
 
 class AutopilotBadGatewayError(AutopilotBackoffError):
-    """class representing 502 status code."""
+    """Class representing 502 status code."""
 
     pass
 
 
 class AutopilotServiceUnavailableError(AutopilotBackoffError):
-    """class representing 503 status code."""
+    """Class representing 503 status code."""
 
     pass
 

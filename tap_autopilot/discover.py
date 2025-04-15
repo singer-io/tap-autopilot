@@ -7,9 +7,8 @@ LOGGER = singer.get_logger()
 
 
 def discover() -> Catalog:
-    """
-    Run the discovery mode, prepare the catalog file and return the catalog.
-    """
+    """Run the discovery mode, prepare the catalog file and return the
+    catalog."""
     schemas, field_metadata = get_schemas()
     catalog = Catalog([])
 

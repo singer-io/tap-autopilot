@@ -7,9 +7,7 @@ LOGGER = singer.get_logger()
 
 
 def update_currently_syncing(state: Dict, stream_name: str) -> None:
-    """
-    Update currently_syncing in state and write it
-    """
+    """Update currently_syncing in state and write it."""
     if not stream_name and singer.get_currently_syncing(state):
         del state["currently_syncing"]
     else:
@@ -18,9 +16,7 @@ def update_currently_syncing(state: Dict, stream_name: str) -> None:
 
 
 def collect_child_to_sync(stream, client, selected_streams, catalog) -> None:
-    """
-    Collect nested child streams to sync
-    """
+    """Collect nested child streams to sync."""
     for child in stream.children:
         if child in selected_streams:
             child_stream_catalog = catalog.get_stream(child)
@@ -35,9 +31,7 @@ def collect_child_to_sync(stream, client, selected_streams, catalog) -> None:
 
 
 def sync(client: Client, config: Dict, catalog: singer.Catalog, state) -> None:
-    """
-    Sync selected streams from catalog
-    """
+    """Sync selected streams from catalog."""
 
     selected_streams = []
     for stream in catalog.get_selected_streams(state):
@@ -49,7 +43,6 @@ def sync(client: Client, config: Dict, catalog: singer.Catalog, state) -> None:
 
     with singer.Transformer() as transformer:
         for stream_name in selected_streams:
-
             stream_catalog = catalog.get_stream(stream_name)
             stream_schema = stream_catalog.schema.to_dict()
             stream_metadata = singer.metadata.to_map(stream_catalog.metadata)

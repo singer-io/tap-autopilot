@@ -10,16 +10,15 @@ from singer import (
     write_record,
     write_schema,
 )
-from singer.utils import  strptime_with_tz
+from singer.utils import strptime_with_tz
 
 LOGGER = get_logger()
 
 
 class BaseStream(ABC):
-    """
-    A Base Class providing structure and boilerplate for generic streams
-    and required attributes for any kind of stream
-    ~~~
+    """A Base Class providing structure and boilerplate for generic streams and
+    required attributes for any kind of stream ~~~
+
     Provides:
      - Basic Attributes (stream_name,replication_method,key_properties)
      - Helper methods for catalog generation
@@ -85,9 +84,8 @@ class BaseStream(ABC):
         transformer: Transformer,
         parent_obj: Dict = None,
     ) -> Dict:
-        """
-        Performs a replication sync for the stream.
-        ~~~
+        """Performs a replication sync for the stream. ~~~
+
         Args:
          - state (dict): represents the state file for the tap.
          - transformer (object): A Object of the singer.transformer class.
@@ -103,21 +101,20 @@ class BaseStream(ABC):
     def get_records(self) -> List:
         """Interacts with api client interaction and pagination."""
         bookmark = ""
+        url_endpoint = self.url_endpoint
         while bookmark is not None:
             response = self.client.get(
-                self.url_endpoint, self.params, self.headers, self.path
+                url_endpoint, self.params, self.headers, self.path
             )
             raw_records = response.get(self.data_key, [])
 
             bookmark = response.get(self.next_page_key)
             if bookmark:
-                url_endpoint = url_endpoint + "/" + bookmark
+                url_endpoint = self.url_endpoint + "/" + bookmark
             yield from raw_records
 
     def write_schema(self):
-        """
-        Write a schema message.
-        """
+        """Write a schema message."""
         try:
             write_schema(self.tap_stream_id, self.schema, self.key_properties)
         except OSError as err:
@@ -127,9 +124,7 @@ class BaseStream(ABC):
             raise err
 
     def get_url_endpoint(self, parent_obj: Dict = None) -> str:
-        """
-        Get the URL endpoint for the stream
-        """
+        """Get the URL endpoint for the stream."""
         return f"{self.client.base_url}/{self.path}"
 
 
@@ -164,9 +159,8 @@ class IncrementalStream(BaseStream):
         parent_obj: Dict = None,
     ) -> Dict:
         """Implementation for `type: Incremental` stream."""
-        current_max_bookmark_date = bookmark_date = strptime_with_tz(
-            self.get_bookmark(state)
-        )
+        bookmark_date = strptime_with_tz(self.get_bookmark(state))
+        current_max_bookmark_date = bookmark_date
         self.url_endpoint = self.get_url_endpoint()
 
         with metrics.record_counter(self.tap_stream_id) as counter:
