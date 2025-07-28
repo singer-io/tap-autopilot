@@ -16,7 +16,7 @@ jobs:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
-            pylint tap_autopilot -d C,W
+            pylint tap_autopilot -d C,W,consider-using-from-import
       - run:
           name: 'JSON Validator'
           command: |
