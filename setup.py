@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='tap-autopilot',
-      version='0.3.0',
+      version='0.3.1',
       description='Singer.io tap for extracting data from the Autopilot API',
       author='Stitch',
       author_email='support@stitchdata.com',
@@ -11,10 +11,10 @@ setup(name='tap-autopilot',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_autopilot'],
       install_requires=[
-          'attrs==16.3.0',
-          'singer-python==5.8.1',
-          'requests==2.20.0',
-          'backoff==1.8.0',
+          'attrs==25.3.0',
+          'singer-python==5.14.3',
+          'requests==2.32.5',
+          'backoff==1.10.0',
           'pendulum==1.2.0'
       ],
       extras_require={

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.1
+  * Upgrade attrs, backoff, requests, and singer-python [#12](https://github.com/singer-io/tap-autopilot/pull/12)
+
 ## [v0.3.0](https://github.com/singer-io/tap-autopilot/tree/v0.3.0)
 
 [Full Changelog](https://github.com/singer-io/tap-autopilot/compare/v0.2.0...v0.3.0)
