@@ -1,0 +1,28 @@
+name: commit
+
+on:
+  push:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-uv
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup virtual env
+        run: |
+          uv venv --python 3.9 /usr/local/share/virtualenvs/tap-autopilot
+          source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
+          uv pip install .[dev]
+          uv pip install pylint
+      - name: pylint
+        run: |
+          source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
+          pylint tap_autopilot -d C,W,consider-using-from-import
+      - name: JSON Validator
+        run: |
+          source /usr/local/share/virtualenvs/tap-tester/bin/activate
+          stitch-validate-json tap_autopilot/schemas/*.json
