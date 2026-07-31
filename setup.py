@@ -24,6 +24,7 @@ setup(name='tap-autopilot',
               'nose',
               'pytest',
               'pytest-cov',
+              'coverage',
           ]
       },
       entry_points='''
