@@ -443,5 +443,5 @@ def main():
         LOGGER.info("No Streams were selected")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
