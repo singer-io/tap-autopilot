@@ -8,10 +8,10 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            uv venv --python 3.9 /usr/local/share/virtualenvs/tap-autopilot
+            uv venv --python 3.12 /usr/local/share/virtualenvs/tap-autopilot
             source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
-            uv pip install .[dev]
-            uv pip install pylint
+            uv pip install -U setuptools
+            uv pip install -e .[dev]
       - run:
           name: 'pylint'
           command: |
@@ -22,6 +22,41 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             stitch-validate-json tap_autopilot/schemas/*.json
+      - run:
+          name: 'Unit Tests'
+          command: |
+            source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
+            mkdir -p test_output
+            pytest --cov=tap_autopilot --cov-report=term-missing --junitxml=test_output/unittests.xml tests/unittests
+          when: always
+      - run:
+          name: 'Mocked Integration Tests'
+          command: |
+            source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
+            pytest --cov=tap_autopilot --cov-report=term-missing --junitxml=test_output/mockedtests.xml tests/mockedtests -v
+          when: always
+      - run:
+          name: 'Coverage Report'
+          command: |
+            source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
+            pytest --cov=tap_autopilot --cov-report=term-missing --junitxml=test_output/all_tests.xml tests/
+            coverage html
+          when: always
+      - store_test_results:
+          path: test_output
+      - store_artifacts:
+          path: htmlcov
+      # TODO: Uncomment when credentials are available in CI environment
+      # - run:
+      #     name: 'Integration Tests'
+      #     command: |
+      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
+      #       uv pip install --upgrade awscli
+      #       uv pip install .
+      #       aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
+      #       source dev_env.sh
+      #       unset USE_STITCH_BACKEND
+      #       run-test --tap=tap-autopilot tests
 
 workflows:
   version: 2

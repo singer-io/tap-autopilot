@@ -11,17 +11,19 @@ setup(name='tap-autopilot',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_autopilot'],
       install_requires=[
-          'attrs==25.3.0',
-          'singer-python==5.14.3',
-          'requests==2.32.5',
-          'backoff==1.10.0',
-          'pendulum==1.2.0'
+          'attrs==26.1.0',
+          'singer-python==6.8.0',
+          'requests==2.34.2',
+          'backoff==2.2.1',
+          'pendulum==3.2.0'
       ],
       extras_require={
           'dev': [
               'pylint',
               'ipdb',
               'nose',
+              'pytest',
+              'pytest-cov',
           ]
       },
       entry_points='''
