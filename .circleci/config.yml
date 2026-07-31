@@ -39,7 +39,7 @@ jobs:
           name: 'Coverage Report'
           command: |
             source /usr/local/share/virtualenvs/tap-autopilot/bin/activate
-            pytest --cov=tap_autopilot --cov-report=term-missing --junitxml=test_output/all_tests.xml tests/
+            pytest --cov=tap_autopilot --cov-report=term-missing --cov-fail-under=99 --junitxml=test_output/all_tests.xml tests/
             coverage html
           when: always
       - store_test_results:
