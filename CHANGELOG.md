@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0
+  * Updated python version 3.12 
+  * Added integration tests.
+
 ## 0.3.1
   * Upgrade attrs, backoff, requests, and singer-python [#12](https://github.com/singer-io/tap-autopilot/pull/12)
 
