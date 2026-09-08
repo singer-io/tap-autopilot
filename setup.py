@@ -12,8 +12,8 @@ setup(name='tap-autopilot',
       py_modules=['tap_autopilot'],
       install_requires=[
           'attrs==25.3.0',
-          'singer-python==5.14.3',
-          'requests==2.32.5',
+          'singer-python==5.19.0',
+          'requests==2.34.2',
           'backoff==1.10.0',
           'pendulum==1.2.0'
       ],
